@@ -23,8 +23,8 @@ const Dashboard = () => {
     const fetchData = async () => {
         try {
             const [noticesRes, eventsRes] = await Promise.all([
-                fetch('http://localhost:5001/api/notices'),
-                fetch('http://localhost:5001/api/events')
+                fetch(`${import.meta.env.VITE_API_URL}/api/notices`),
+                fetch(`${import.meta.env.VITE_API_URL}/api/events`)
             ]);
             const noticesData = noticesRes.ok ? await noticesRes.json() : [];
             const eventsData = eventsRes.ok ? await eventsRes.json() : [];

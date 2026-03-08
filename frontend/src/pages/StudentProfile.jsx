@@ -18,7 +18,7 @@ const StudentProfile = () => {
         }
 
         // In a real app we'd fetch real profile by user._id
-        // fetch(`http://localhost:5000/api/students/user/${user._id}`)
+        // fetch(`${import.meta.env.VITE_API_URL}/api/students/user/${user._id}`)
         // For Module 1 demonstration, we use rich mock data
         setTimeout(() => {
             setProfile(MOCK_PROFILE);
