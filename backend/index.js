@@ -8,7 +8,15 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'], credentials: true })); // Vite default ports
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:5175',
+        process.env.FRONTEND_URL
+    ].filter(Boolean),
+    credentials: true
+}));
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
 
