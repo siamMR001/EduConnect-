@@ -7,7 +7,7 @@ import {
     Loader2, AlertCircle, RefreshCw
 } from 'lucide-react';
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/api/students`;
+const API_BASE = `http://localhost:5000/api/students`;
 
 // ─── Avatar Color Generator ─────────────────────────────────────────
 const AVATAR_COLORS = [
