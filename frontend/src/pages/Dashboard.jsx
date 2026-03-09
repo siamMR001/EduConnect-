@@ -46,17 +46,11 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
-<<<<<<< HEAD
-            const [noticesRes, eventsRes] = await Promise.all([
-                fetch('http://localhost:5000/api/notices'),
-                fetch('http://localhost:5000/api/events')
-=======
             const [noticesRes, eventsRes, settingsRes, admissionsRes] = await Promise.all([
                 fetch(`${import.meta.env.VITE_API_URL}/api/notices`),
                 fetch(`${import.meta.env.VITE_API_URL}/api/events`),
                 fetch(`${import.meta.env.VITE_API_URL}/api/settings`),
                 fetch(`${import.meta.env.VITE_API_URL}/api/admissions`) // Fetch admissions
->>>>>>> 5de90c1af608c6774214142d6808372edd0abbcd
             ]);
             const noticesData = noticesRes.ok ? await noticesRes.json() : [];
             const eventsData = eventsRes.ok ? await eventsRes.json() : [];

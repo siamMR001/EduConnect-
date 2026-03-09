@@ -8,6 +8,7 @@ import StudentProfile from './pages/StudentProfile';
 import NoticeBoard from './pages/NoticeBoard';
 import EventCalendar from './pages/EventCalendar';
 import NotificationsPanel from './components/NotificationsPanel';
+import StudentDirectory from './pages/StudentDirectory';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -67,6 +68,9 @@ function App() {
                   <Link to="/profile" className="text-gray-700 hover:text-blue-600 font-medium transition">
                     Profile
                   </Link>
+                  <Link to="/directory" className="text-gray-700 hover:text-blue-600 font-medium transition">
+                    Directory
+                  </Link>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -92,6 +96,7 @@ function App() {
             <Route path="/calendar" element={isLoggedIn ? <EventCalendar /> : <Navigate to="/login" replace />} />
             <Route path="/apply" element={<AdmissionForm />} />
             <Route path="/profile" element={isLoggedIn ? <StudentProfile /> : <Navigate to="/login" replace />} />
+            <Route path="/directory" element={<StudentDirectory />} />
             <Route path="*" element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />} />
           </Routes>
         </main>

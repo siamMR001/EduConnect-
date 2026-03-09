@@ -26,11 +26,7 @@ const Login = () => {
             : { ...formData, role: activeTab };
 
         try {
-<<<<<<< HEAD
-            const response = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
-=======
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/${endpoint}`, {
->>>>>>> 5de90c1af608c6774214142d6808372edd0abbcd
+            const response = await fetch(`http://127.0.0.1:5001/api/auth/${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
