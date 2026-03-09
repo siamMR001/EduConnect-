@@ -8,7 +8,10 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'], credentials: true })); // Vite default ports
+app.use(cors({
+    origin: '*', // Allow all origins for easier testing temporarily
+    credentials: true
+}));
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
 
@@ -24,6 +27,7 @@ app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/admissions', require('./routes/admissionRoutes'));
 app.use('/api/students', require('./routes/studentRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
 
 
 

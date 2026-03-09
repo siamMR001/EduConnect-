@@ -5,10 +5,10 @@ const admissionSchema = new mongoose.Schema({
     applyingForClass: { type: String, required: true }, // e.g., '07'
 
     // Personal Info
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    dateOfBirth: { type: Date, required: true },
-    gender: { type: String, enum: ['Male', 'Female', 'Other'], required: true },
+    firstName: { type: String },
+    lastName: { type: String },
+    dateOfBirth: { type: Date },
+    gender: { type: String, enum: ['Male', 'Female', 'Other'] },
     religion: { type: String },
     bloodGroup: { type: String },
     identificationMarks: { type: String },
@@ -16,21 +16,21 @@ const admissionSchema = new mongoose.Schema({
     studentPhoto: { type: String }, // File path
 
     // Parents Info
-    fatherName: { type: String, required: true },
-    fatherPhone: { type: String, required: true },
+    fatherName: { type: String },
+    fatherPhone: { type: String },
     fatherEmail: { type: String },
     fatherOccupation: { type: String },
     fatherPhoto: { type: String }, // File path
 
-    motherName: { type: String, required: true },
-    motherPhone: { type: String, required: true },
+    motherName: { type: String },
+    motherPhone: { type: String },
     motherEmail: { type: String },
     motherOccupation: { type: String },
     motherPhoto: { type: String }, // File path
 
     // Guardian Info (if different)
-    guardianName: { type: String, required: true },
-    guardianPhone: { type: String, required: true },
+    guardianName: { type: String },
+    guardianPhone: { type: String },
     guardianRelation: { type: String },
     guardianOccupation: { type: String },
     guardianEmail: { type: String },
@@ -63,6 +63,11 @@ const admissionSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['paid', 'unpaid'],
+        default: 'unpaid'
     },
     createdAt: { type: Date, default: Date.now }
 });

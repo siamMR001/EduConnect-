@@ -1,5 +1,3 @@
-<<<<<<< HEAD
->>>>>>> 4d2a395 (Initial commit with frontend and backend setup)
 # Logs
 logs
 *.log
@@ -142,6 +140,4 @@ vite.config.ts.timestamp-*
 
 # macOS files
 .DS_Store
-
-=======
-node_modules
+node_modules 2/

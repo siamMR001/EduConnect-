@@ -3,6 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const Admission = require('../models/Admission');
+const User = require('../models/User');
+const StudentProfile = require('../models/StudentProfile');
 
 // Configure Multer storage
 const storage = multer.diskStorage({
@@ -25,6 +27,34 @@ const uploadFields = upload.fields([
     { name: 'previousResultSheet', maxCount: 1 },
     { name: 'documentsPdf', maxCount: 10 }
 ]);
+
+// Generate Next Student ID for Preview
+router.get('/generate-id', async (req, res) => {
+    try {
+        const classStr = req.query.classCode || '01';
+        const year = new Date().getFullYear().toString().slice(-2);
+        const classCode = classStr.padStart(2, '0');
+
+        const prefixRegex = new RegExp(`^${year}${classCode}`);
+        const lastAdmission = await Admission.findOne({
+            studentId: prefixRegex
+        }).sort({ studentId: -1 });
+
+        let sequence = 1;
+        if (lastAdmission && lastAdmission.studentId) {
+            const lastSeqStr = lastAdmission.studentId.slice(4);
+            sequence = parseInt(lastSeqStr, 10) + 1;
+        }
+
+        const seqCode = sequence.toString().padStart(4, '0');
+        const nextId = `${year}${classCode}${seqCode}`;
+
+        res.json({ studentId: nextId });
+    } catch (error) {
+        console.error("Generate ID Error:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 // Submit new admission application
 router.post('/', function (req, res, next) {
@@ -87,19 +117,97 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Update application status
+// Helper function for auto-enrollment
+const autoEnrollStudent = async (application) => {
+    const studentId = application.studentId;
+    const userEmail = application.guardianEmail || application.fatherEmail || application.motherEmail || `${studentId}@educonnect.com`;
+    const defaultPassword = `${studentId}`;
+
+    // 1. Create User Account for Guardian/Student
+    let existingUser = await User.findOne({ email: userEmail });
+    let userId;
+
+    if (existingUser) {
+        userId = existingUser._id;
+    } else {
+        const newUser = await User.create({
+            name: application.guardianName || application.fatherName || 'Guardian',
+            email: userEmail,
+            password: defaultPassword,
+            role: 'student_guardian'
+        });
+        userId = newUser._id;
+    }
+
+    // 2. Create Student Profile
+    const profileExists = await StudentProfile.findOne({ studentId });
+    if (!profileExists) {
+        await StudentProfile.create({
+            user: userId,
+            studentId: studentId,
+            firstName: application.firstName,
+            lastName: application.lastName,
+            dateOfBirth: application.dateOfBirth,
+            gender: application.gender,
+            bloodGroup: application.bloodGroup,
+            currentClass: application.applyingForClass,
+            section: 'A', // Default to section A
+            guardianName: application.guardianName || application.fatherName || 'N/A',
+            guardianPhone: application.guardianPhone || application.fatherPhone || 'N/A',
+            guardianEmail: userEmail,
+            address: typeof application.presentAddress === 'string' ? JSON.parse(application.presentAddress).details : application.presentAddress?.details || 'N/A',
+            status: 'active'
+        });
+    }
+};
+
+// Bulk Approve All Pending Applications
+router.patch('/approve-all-pending', async (req, res) => {
+    try {
+        const pendingApps = await Admission.find({ status: 'pending' });
+
+        if (pendingApps.length === 0) {
+            return res.status(404).json({ message: 'No pending applications found to approve.' });
+        }
+
+        let approvedCount = 0;
+        for (const app of pendingApps) {
+            await autoEnrollStudent(app);
+            app.status = 'approved';
+            await app.save();
+            approvedCount++;
+        }
+
+        res.json({ message: `Successfully approved and auto-enrolled ${approvedCount} students.` });
+    } catch (error) {
+        console.error("Bulk Approve Error:", error);
+        res.status(500).json({ message: 'Server error during bulk approval', error: error.message });
+    }
+});
+
+// Update application status & Auto-Enrollment
 router.patch('/:id/status', async (req, res) => {
     try {
         const { status } = req.body;
-        const application = await Admission.findByIdAndUpdate(
-            req.params.id,
-            { status },
-            { new: true }
-        );
-        if (!application) return res.status(404).json({ message: 'Not found' });
-        res.json(application);
+        const application = await Admission.findById(req.params.id);
+
+        if (!application) {
+            return res.status(404).json({ message: 'Admission application not found' });
+        }
+
+        // Auto-Enrollment logic when status turns strictly to 'approved'
+        if (status === 'approved' && application.status !== 'approved') {
+            await autoEnrollStudent(application);
+        }
+
+        // Finally, update the status
+        application.status = status;
+        await application.save();
+
+        res.json({ message: 'Status updated successfully', application });
     } catch (error) {
-        res.status(500).json({ message: 'Server error' });
+        console.error("Status Update/Enrollment Error:", error);
+        res.status(500).json({ message: 'Server error during update', error: error.message });
     }
 });
 
