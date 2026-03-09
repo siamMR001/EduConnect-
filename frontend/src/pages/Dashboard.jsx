@@ -46,18 +46,22 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
-            const [noticesRes, eventsRes] = await Promise.all([
+            const [noticesRes, eventsRes, admissionsRes] = await Promise.all([
                 fetch('http://localhost:5000/api/notices'),
-                fetch('http://localhost:5000/api/events')
+                fetch('http://localhost:5000/api/events'),
+                fetch('http://localhost:5000/api/admissions')
             ]);
             const noticesData = noticesRes.ok ? await noticesRes.json() : [];
             const eventsData = eventsRes.ok ? await eventsRes.json() : [];
+            const admissionsData = admissionsRes.ok ? await admissionsRes.json() : [];
 
             setNotices(noticesData.length ? noticesData : MOCK_NOTICES);
             setEvents(eventsData.length ? eventsData : MOCK_EVENTS);
+            setAdmissions(admissionsData.length ? admissionsData : []);
         } catch (err) {
             setNotices(MOCK_NOTICES);
             setEvents(MOCK_EVENTS);
+            setAdmissions([]);
         }
     };
 
