@@ -12,12 +12,41 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Create notice (Admin/Teacher only in full app, but simple for now)
+// Create notice
 router.post('/', async (req, res) => {
     try {
         const { title, content, targetRole, priority, author } = req.body;
         const notice = await Notice.create({ title, content, targetRole, priority, author });
         res.status(201).json(notice);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update notice
+router.put('/:id', async (req, res) => {
+    try {
+        const { title, content, targetRole, priority } = req.body;
+        const notice = await Notice.findByIdAndUpdate(
+            req.params.id,
+            { title, content, targetRole, priority },
+            { new: true }
+        );
+        if (!notice) return res.status(404).json({ message: 'Notice not found' });
+        res.json(notice);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Delete notice
+router.delete('/:id', async (req, res) => {
+    try {
+        const deletedNotice = await Notice.findByIdAndDelete(req.params.id);
+        if (!deletedNotice) {
+            return res.status(404).json({ message: 'Notice not found' });
+        }
+        res.json({ message: 'Notice deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }

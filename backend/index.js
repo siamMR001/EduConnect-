@@ -9,12 +9,7 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: [
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://localhost:5175',
-        process.env.FRONTEND_URL
-    ].filter(Boolean),
+    origin: '*', // Allow all origins for easier testing temporarily
     credentials: true
 }));
 app.use(cookieParser());
@@ -31,6 +26,7 @@ app.use('/api/notices', require('./routes/noticeRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/admissions', require('./routes/admissionRoutes'));
 app.use('/api/students', require('./routes/studentRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
 
 
 
