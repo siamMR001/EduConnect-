@@ -46,21 +46,23 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
+<<<<<<< HEAD
             const [noticesRes, eventsRes, settingsRes, admissionsRes] = await Promise.all([
                 fetch(`${import.meta.env.VITE_API_URL}/api/notices`),
                 fetch(`${import.meta.env.VITE_API_URL}/api/events`),
                 fetch(`${import.meta.env.VITE_API_URL}/api/settings`),
                 fetch(`${import.meta.env.VITE_API_URL}/api/admissions`) // Fetch admissions
+=======
+            const [noticesRes, eventsRes] = await Promise.all([
+                fetch('http://localhost:5000/api/notices'),
+                fetch('http://localhost:5000/api/events')
+>>>>>>> c5d3fd0bbc667d9846a42387045460cd33601155
             ]);
             const noticesData = noticesRes.ok ? await noticesRes.json() : [];
             const eventsData = eventsRes.ok ? await eventsRes.json() : [];
-            const settingsData = settingsRes.ok ? await settingsRes.json() : { admissionFee: 500 };
-            const admissionsData = admissionsRes.ok ? await admissionsRes.json() : [];
 
             setNotices(noticesData.length ? noticesData : MOCK_NOTICES);
             setEvents(eventsData.length ? eventsData : MOCK_EVENTS);
-            setAdmissions(admissionsData);
-            setAdmissionFee(settingsData.admissionFee || 500);
         } catch (err) {
             setNotices(MOCK_NOTICES);
             setEvents(MOCK_EVENTS);
@@ -69,7 +71,7 @@ const Dashboard = () => {
 
     const handleSaveSettings = async () => {
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
+            await fetch('http://localhost:5000/api/settings', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ admissionFee: Number(admissionFee) })
@@ -89,7 +91,7 @@ const Dashboard = () => {
 
     const handleUpdateAdmissionStatus = async (id, status) => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/${id}/status`, {
+            const res = await fetch(`http://localhost:5000/api/admissions/${id}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
@@ -117,7 +119,7 @@ const Dashboard = () => {
 
     const handleApproveAllPending = async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/approve-all-pending`, {
+            const res = await fetch(`http://localhost:5000/api/admissions/approve-all-pending`, {
                 method: 'PATCH'
             });
             const data = await res.json();
@@ -137,7 +139,7 @@ const Dashboard = () => {
     const handleAddNotice = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notices`, {
+            const res = await fetch(`http://localhost:5000/api/notices`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...newNotice, author: user._id })
@@ -163,7 +165,7 @@ const Dashboard = () => {
         }
         setConfirmDeleteNoticeId(null);
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/notices/${id}`, { method: 'DELETE' });
+            await fetch(`http://localhost:5000/api/notices/${id}`, { method: 'DELETE' });
             setNotices(notices.filter(n => n._id !== id));
         } catch (err) {
             console.error(err);
@@ -173,7 +175,7 @@ const Dashboard = () => {
     const handleUpdateNotice = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notices/${editingNotice._id}`, {
+            const res = await fetch(`http://localhost:5000/api/notices/${editingNotice._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -199,7 +201,7 @@ const Dashboard = () => {
     const handleAddEvent = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/events`, {
+            const res = await fetch(`http://localhost:5000/api/events`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...newEvent, organizer: user._id })
@@ -226,7 +228,7 @@ const Dashboard = () => {
         }
         setConfirmDeleteEventId(null);
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/events/${id}`, { method: 'DELETE' });
+            await fetch(`http://localhost:5000/api/events/${id}`, { method: 'DELETE' });
             setEvents(events.filter(e => e._id !== id));
         } catch (err) {
             console.error(err);
@@ -237,7 +239,7 @@ const Dashboard = () => {
         e.preventDefault();
         try {
             // Format the date correctly for the API
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${editingEvent._id}`, {
+            const res = await fetch(`http://localhost:5000/api/events/${editingEvent._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -562,22 +564,22 @@ const Dashboard = () => {
                                 <h4 className="text-xl font-bold border-b border-white/10 pb-3 mb-4 text-white">Uploaded Documents</h4>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {selectedApplication.studentPhoto && (
-                                        <a href={`${import.meta.env.VITE_API_URL}${selectedApplication.studentPhoto}`} target="_blank" rel="noreferrer" className="flex flex-col items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors group">
+                                        <a href={`http://localhost:5000${selectedApplication.studentPhoto}`} target="_blank" rel="noreferrer" className="flex flex-col items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors group">
                                             <div className="w-16 h-16 bg-black/30 rounded-full mb-3 overflow-hidden border-2 border-primary/50 group-hover:border-primary transition-colors">
-                                                <img src={`${import.meta.env.VITE_API_URL}${selectedApplication.studentPhoto}`} alt="Student" className="w-full h-full object-cover" />
+                                                <img src={`http://localhost:5000${selectedApplication.studentPhoto}`} alt="Student" className="w-full h-full object-cover" />
                                             </div>
                                             <span className="text-sm font-medium text-slate-300">Student Photo</span>
                                         </a>
                                     )}
                                     {selectedApplication.previousResultSheet && (
-                                        <a href={`${import.meta.env.VITE_API_URL}${selectedApplication.previousResultSheet}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
+                                        <a href={`http://localhost:5000${selectedApplication.previousResultSheet}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
                                             <FileText size={32} className="text-blue-400 mb-2" />
                                             <span className="text-sm font-medium text-slate-300">Previous Result</span>
                                             <span className="text-xs text-slate-500 mt-1">View File</span>
                                         </a>
                                     )}
                                     {selectedApplication.documentsPdf && selectedApplication.documentsPdf.map((doc, idx) => (
-                                        <a key={idx} href={`${import.meta.env.VITE_API_URL}${doc}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
+                                        <a key={idx} href={`http://localhost:5000${doc}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
                                             <FileText size={32} className="text-pink-400 mb-2" />
                                             <span className="text-sm font-medium text-slate-300">Document {idx + 1}</span>
                                             <span className="text-xs text-slate-500 mt-1">View PDF</span>
