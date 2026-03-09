@@ -26,11 +26,7 @@ const Login = () => {
             : { ...formData, role: activeTab };
 
         try {
-<<<<<<< HEAD
-            const response = await fetch(`http://127.0.0.1:5001/api/auth/${endpoint}`, {
-=======
             const response = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
->>>>>>> c5d3fd0bbc667d9846a42387045460cd33601155
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
