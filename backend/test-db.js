@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 async function testConnection() {
     try {
         console.log('Connecting to MongoDB...');
-        await mongoose.connect('mongodb://localhost:27017/edu-connect', { serverSelectionTimeoutMS: 2000 });
+        await mongoose.connect('mongodb+srv://paro:1234@cluster0.pae5pyr.mongodb.net/eduConnect?retryWrites=true&w=majority&appName=Cluster0', { serverSelectionTimeoutMS: 5000 });
         console.log('✅ Successfully connected to MongoDB!');
 
         // Get all collections

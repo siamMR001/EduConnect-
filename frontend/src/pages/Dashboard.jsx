@@ -23,8 +23,8 @@ const Dashboard = () => {
     const fetchData = async () => {
         try {
             const [noticesRes, eventsRes] = await Promise.all([
-                fetch('http://localhost:5001/api/notices'),
-                fetch('http://localhost:5001/api/events')
+                fetch('http://localhost:5000/api/notices'),
+                fetch('http://localhost:5000/api/events')
             ]);
             const noticesData = noticesRes.ok ? await noticesRes.json() : [];
             const eventsData = eventsRes.ok ? await eventsRes.json() : [];

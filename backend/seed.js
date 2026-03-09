@@ -5,8 +5,8 @@ const StudentProfile = require('./models/StudentProfile');
 
 async function seedDatabase() {
     try {
-        await mongoose.connect('mongodb://localhost:27017/edu-connect');
-        console.log('Connected to MongoDB.');
+        await mongoose.connect('mongodb+srv://paro:1234@cluster0.pae5pyr.mongodb.net/eduConnect?retryWrites=true&w=majority&appName=Cluster0');
+        console.log('Connected to MongoDB Atlas.');
 
         // Clear existing data
         await User.deleteMany();

@@ -1,2 +1,0 @@
-# EduConnect-
- School Management System

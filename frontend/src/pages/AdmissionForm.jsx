@@ -123,7 +123,7 @@ const AdmissionForm = () => {
                 }
             });
 
-            const response = await fetch('http://localhost:5001/api/admissions', {
+            const response = await fetch('http://localhost:5000/api/admissions', {
                 method: 'POST',
                 // Note: Do NOT set Content-Type manually when sending FormData, browser sets it with boundary
                 body: submissionData
