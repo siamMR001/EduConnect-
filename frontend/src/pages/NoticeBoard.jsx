@@ -32,7 +32,7 @@ export default function NoticeBoard() {
 
     const categories = ['academic', 'event', 'announcement', 'holiday', 'emergency', 'other'];
     const priorities = ['normal', 'high', 'urgent'];
-    const targetRoles = ['all', 'teacher', 'student_guardian'];
+    const targetRoles = ['all', 'teacher', 'student'];
 
     // Fetch notices
     const fetchNotices = async () => {
@@ -378,7 +378,7 @@ export default function NoticeBoard() {
                                                 {notice.attachments.map((attachment, idx) => (
                                                     <a
                                                         key={idx}
-                                                        href={`http://localhost:5000/${attachment.filepath}`}
+                                                        href={`${import.meta.env.VITE_API_URL}/${attachment.filepath}`}
                                                         download
                                                         className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
                                                     >
@@ -448,7 +448,7 @@ export default function NoticeBoard() {
                                         {selectedNotice.attachments.map((attachment, idx) => (
                                             <a
                                                 key={idx}
-                                                href={`http://localhost:5000/${attachment.filepath}`}
+                                                href={`${import.meta.env.VITE_API_URL}/${attachment.filepath}`}
                                                 download
                                                 className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition font-medium"
                                             >

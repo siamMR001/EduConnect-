@@ -93,7 +93,7 @@ const AdmissionForm = () => {
 
         try {
             // Fetch preview ID from backend
-            const res = await fetch(`http://localhost:5000/api/admissions/generate-id?classCode=${formData.applyingForClass}`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/generate-id?classCode=${formData.applyingForClass}`);
             const data = await res.json();
             if (res.ok && data.studentId) {
                 setPreviewStudentId(data.studentId);
@@ -156,7 +156,7 @@ const AdmissionForm = () => {
                 }
             });
 
-            const response = await fetch('http://localhost:5000/api/admissions', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions`, {
                 method: 'POST',
                 // Note: Do NOT set Content-Type manually when sending FormData, browser sets it with boundary
                 body: submissionData

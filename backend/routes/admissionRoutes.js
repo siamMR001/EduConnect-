@@ -117,45 +117,53 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Helper function for auto-enrollment
-const autoEnrollStudent = async (application) => {
+// Helper to shift a student from admissions to main profile database without requiring a user login yet.
+const shiftToStudentProfile = async (application) => {
     const studentId = application.studentId;
-    const userEmail = application.guardianEmail || application.fatherEmail || application.motherEmail || `${studentId}@educonnect.com`;
-    const defaultPassword = `${studentId}`;
-
-    // 1. Create User Account for Guardian/Student
-    let existingUser = await User.findOne({ email: userEmail });
-    let userId;
-
-    if (existingUser) {
-        userId = existingUser._id;
-    } else {
-        const newUser = await User.create({
-            name: application.guardianName || application.fatherName || 'Guardian',
-            email: userEmail,
-            password: defaultPassword,
-            role: 'student_guardian'
-        });
-        userId = newUser._id;
-    }
-
-    // 2. Create Student Profile
     const profileExists = await StudentProfile.findOne({ studentId });
     if (!profileExists) {
         await StudentProfile.create({
-            user: userId,
             studentId: studentId,
-            firstName: application.firstName,
-            lastName: application.lastName,
-            dateOfBirth: application.dateOfBirth,
-            gender: application.gender,
+            firstName: application.firstName || 'Student',
+            lastName: application.lastName || 'Profile',
+            dateOfBirth: application.dateOfBirth || new Date('2010-01-01'),
+            gender: application.gender || 'Other',
             bloodGroup: application.bloodGroup,
-            currentClass: application.applyingForClass,
-            section: 'A', // Default to section A
-            guardianName: application.guardianName || application.fatherName || 'N/A',
+            religion: application.religion,
+            identificationMarks: application.identificationMarks,
+            medicalRecords: application.medicalRecords,
+            studentPhoto: application.studentPhoto,
+            
+            currentClass: application.applyingForClass || '01',
+            section: 'A',
+            previousSchool: application.previousSchool,
+            previousResultSheet: application.previousResultSheet,
+
+            fatherName: application.fatherName,
+            fatherPhone: application.fatherPhone,
+            fatherEmail: application.fatherEmail,
+            fatherOccupation: application.fatherOccupation,
+            fatherPhoto: application.fatherPhoto,
+
+            motherName: application.motherName,
+            motherPhone: application.motherPhone,
+            motherEmail: application.motherEmail,
+            motherOccupation: application.motherOccupation,
+            motherPhoto: application.motherPhoto,
+
+            guardianName: application.guardianName || application.fatherName || 'Guardian',
             guardianPhone: application.guardianPhone || application.fatherPhone || 'N/A',
-            guardianEmail: userEmail,
+            guardianEmail: application.guardianEmail || application.fatherEmail || '',
+            guardianRelation: application.guardianRelation,
+            guardianOccupation: application.guardianOccupation,
+            guardianPhoto: application.guardianPhoto,
+
             address: typeof application.presentAddress === 'string' ? JSON.parse(application.presentAddress).details : application.presentAddress?.details || 'N/A',
+            presentAddress: typeof application.presentAddress === 'string' ? JSON.parse(application.presentAddress) : application.presentAddress,
+            permanentAddress: typeof application.permanentAddress === 'string' ? JSON.parse(application.permanentAddress) : application.permanentAddress,
+            
+            documentsPdf: application.documentsPdf,
+
             status: 'active'
         });
     }
@@ -172,9 +180,8 @@ router.patch('/approve-all-pending', async (req, res) => {
 
         let approvedCount = 0;
         for (const app of pendingApps) {
-            await autoEnrollStudent(app);
-            app.status = 'approved';
-            await app.save();
+            await shiftToStudentProfile(app);
+            await Admission.findByIdAndDelete(app._id);
             approvedCount++;
         }
 
@@ -195,12 +202,13 @@ router.patch('/:id/status', async (req, res) => {
             return res.status(404).json({ message: 'Admission application not found' });
         }
 
-        // Auto-Enrollment logic when status turns strictly to 'approved'
-        if (status === 'approved' && application.status !== 'approved') {
-            await autoEnrollStudent(application);
+        if (status === 'approved') {
+            await shiftToStudentProfile(application);
+            await Admission.findByIdAndDelete(application._id);
+            return res.json({ message: 'Application approved and shifted to Student Profiles.', application: { ...application.toObject(), status: 'approved' } });
         }
 
-        // Finally, update the status
+        // If rejected or pending, keep in admissions and just update status
         application.status = status;
         await application.save();
 

@@ -22,7 +22,7 @@ const eventSchema = new mongoose.Schema({
     description: String,
     targetRole: {
         type: String,
-        enum: ['all', 'teacher', 'student_guardian', 'admin'],
+        enum: ['all', 'teacher', 'student', 'admin'],
         default: 'all'
     },
     capacity: { type: Number },

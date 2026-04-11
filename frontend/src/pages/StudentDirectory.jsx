@@ -7,7 +7,7 @@ import {
     Loader2, AlertCircle, RefreshCw
 } from 'lucide-react';
 
-const API_BASE = `http://localhost:5000/api/students`;
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/students`;
 
 // ─── Avatar Color Generator ─────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -66,6 +66,7 @@ const StudentDirectory = () => {
             id: s.studentId,
             firstName: s.firstName,
             lastName: s.lastName,
+            studentPhoto: s.studentPhoto,
             gender: s.gender,
             class: s.currentClass,
             section: s.section,
@@ -154,14 +155,14 @@ const StudentDirectory = () => {
             <div className="flex items-center gap-2 text-xs mb-1">
                 <button onClick={() => navigate('/dashboard')} className="text-primary-light hover:text-white transition-colors font-medium uppercase tracking-wider">EduConnect</button>
                 <ChevronRight size={12} className="text-slate-500" />
-                <span className="text-white font-bold uppercase tracking-wider">Student Information System (SIC)</span>
+                <span className="text-white font-bold uppercase tracking-wider">Student Information System (SIS)</span>
             </div>
 
             {/* ── Page Header ──────────────────────────────────── */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 mt-2">
                 <div>
                     <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-1">
-                        Student Information System <span className="text-primary-light">(SIC)</span>
+                        Student Information System <span className="text-primary-light">(SIS)</span>
                     </h1>
                     <p className="text-slate-400 text-sm">Digital profiles · Parent records · Academic history · ID cards</p>
                 </div>
@@ -321,8 +322,12 @@ const StudentCard = ({ student, colorClass, onViewProfile, onGenerateID }) => (
     <div className="glass-panel border border-white/5 hover:border-primary/40 transition-all duration-300 group overflow-hidden">
         {/* Card Header */}
         <div className="flex items-start gap-3 p-5 pb-4">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center shrink-0 shadow-lg`}>
-                <span className="text-white text-sm font-bold">{student.firstName[0]}{student.lastName[0]}</span>
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center shrink-0 shadow-lg overflow-hidden`}>
+                {student.studentPhoto ? (
+                    <img src={`${import.meta.env.VITE_API_URL}${student.studentPhoto}`} alt="Student" className="w-full h-full object-cover" />
+                ) : (
+                    <span className="text-white text-sm font-bold">{student.firstName[0]}{student.lastName[0]}</span>
+                )}
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
@@ -370,8 +375,12 @@ const InfoRow = ({ label, value }) => (
 // ─── List Row ──────────────────────────────────────────────────────
 const StudentListRow = ({ student, colorClass, onViewProfile, onGenerateID }) => (
     <div className="glass-panel border border-white/5 hover:border-primary/40 transition-all duration-300 p-4 flex items-center gap-4 group">
-        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center shrink-0`}>
-            <span className="text-white text-xs font-bold">{student.firstName[0]}{student.lastName[0]}</span>
+        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center shrink-0 overflow-hidden`}>
+            {student.studentPhoto ? (
+                <img src={`${import.meta.env.VITE_API_URL}${student.studentPhoto}`} alt="Student" className="w-full h-full object-cover" />
+            ) : (
+                <span className="text-white text-xs font-bold">{student.firstName[0]}{student.lastName[0]}</span>
+            )}
         </div>
         <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-1 items-center text-sm min-w-0">
             <div>
@@ -406,14 +415,36 @@ const StudentListRow = ({ student, colorClass, onViewProfile, onGenerateID }) =>
 
 // ─── ID Card Modal ─────────────────────────────────────────────────
 const IDCardModal = ({ student, onClose }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in-up" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in-up print:bg-white print:p-0" onClick={onClose}>
+        <style type="text/css" media="print">
+            {`
+                @page { margin: 0; size: auto; }
+                body * { visibility: hidden; }
+                #id-card-print-area, #id-card-print-area * { visibility: visible; }
+                #id-card-print-area {
+                    position: fixed;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 380px;
+                    height: 570px; /* Force consistent aspect ratio */
+                    border-radius: 1rem;
+                    margin: 0;
+                    box-shadow: none !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                .no-print { display: none !important; }
+            `}
+        </style>
+        
         <div className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <button onClick={onClose} className="absolute -top-12 right-0 text-white/50 hover:text-white transition flex items-center gap-2 text-sm">
+            <button onClick={onClose} className="no-print absolute -top-12 right-0 text-white/50 hover:text-white transition flex items-center gap-2 text-sm">
                 Close <X size={20} />
             </button>
 
             {/* ID Card */}
-            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl relative w-full aspect-[2/3] flex flex-col">
+            <div id="id-card-print-area" className="bg-white rounded-2xl overflow-hidden shadow-2xl relative w-full aspect-[2/3] flex flex-col">
                 {/* Header */}
                 <div className="h-28 bg-gradient-to-br from-primary-dark via-primary to-primary-light relative flex flex-col items-center justify-center">
                     <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
@@ -424,8 +455,12 @@ const IDCardModal = ({ student, onClose }) => (
                 {/* Body */}
                 <div className="flex-1 bg-white relative flex flex-col items-center px-6 pt-14 pb-5">
                     <div className="absolute -top-14 w-28 h-28 rounded-2xl bg-white p-1.5 shadow-xl">
-                        <div className="w-full h-full bg-slate-100 rounded-xl flex items-center justify-center">
-                            <User size={56} className="text-slate-300" />
+                        <div className="w-full h-full bg-slate-100 rounded-xl flex items-center justify-center overflow-hidden">
+                            {student.studentPhoto ? (
+                                <img src={`${import.meta.env.VITE_API_URL}${student.studentPhoto}`} alt="ID" className="w-full h-full object-cover" />
+                            ) : (
+                                <User size={56} className="text-slate-300" />
+                            )}
                         </div>
                     </div>
 
@@ -456,12 +491,12 @@ const IDCardModal = ({ student, onClose }) => (
                 </div>
             </div>
 
-            <div className="mt-5 flex justify-center">
+            <div className="mt-5 flex justify-center no-print">
                 <button
-                    onClick={() => { alert('Downloading PDF ID Card...'); onClose(); }}
-                    className="btn-primary flex items-center gap-2 py-3 px-8 shadow-xl shadow-primary/30 rounded-xl"
+                    onClick={() => { window.print(); }}
+                    className="btn-primary flex items-center gap-2 py-3 px-8 shadow-xl shadow-primary/30 rounded-xl hover:-translate-y-0.5 transition-all duration-300"
                 >
-                    <Download size={18} /> Download PDF
+                    <Download size={18} /> Save as PDF
                 </button>
             </div>
         </div>

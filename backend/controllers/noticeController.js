@@ -99,8 +99,10 @@ exports.createNotice = async (req, res) => {
 
         await Promise.all(notificationPromises);
 
+        fs.appendFileSync(path.join(__dirname, '../../test-notice.log'), `Success: ${JSON.stringify(req.body)}\n`);
         res.status(201).json({ notice, message: 'Notice created and notifications sent' });
     } catch (error) {
+        fs.appendFileSync(path.join(__dirname, '../../test-notice.log'), `Error: ${error.message} \n Body: ${JSON.stringify(req.body)}\n`);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };

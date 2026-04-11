@@ -1,6 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const StudentProfile = require('../models/StudentProfile');
+const multer = require('multer');
+const path = require('path');
+
+// Configure Multer storage
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage: storage });
+
+const uploadFields = upload.fields([
+    { name: 'studentPhoto', maxCount: 1 },
+    { name: 'fatherPhoto', maxCount: 1 },
+    { name: 'motherPhoto', maxCount: 1 },
+    { name: 'guardianPhoto', maxCount: 1 },
+    { name: 'previousResultSheet', maxCount: 1 },
+    { name: 'documentsPdf', maxCount: 10 }
+]);
 
 // Get all student profiles with optional filters
 router.get('/', async (req, res) => {
@@ -92,12 +115,46 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Update student profile
-router.put('/:id', async (req, res) => {
+router.put('/:id', function (req, res, next) {
+    uploadFields(req, res, function (err) {
+        if (err) {
+            console.error("Upload error:", err);
+            return res.status(500).json({ message: 'File upload error', error: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
-        const student = await StudentProfile.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updateData = { ...req.body };
+
+        // Parse nested objects if strings (FormData converts objects to strings)
+        if (updateData.presentAddress && typeof updateData.presentAddress === 'string') {
+            updateData.presentAddress = JSON.parse(updateData.presentAddress);
+        }
+        if (updateData.permanentAddress && typeof updateData.permanentAddress === 'string') {
+            updateData.permanentAddress = JSON.parse(updateData.permanentAddress);
+        }
+        if (updateData.academicHistory && typeof updateData.academicHistory === 'string') {
+            updateData.academicHistory = JSON.parse(updateData.academicHistory);
+        }
+
+        // Map explicitly uploaded files if any exist
+        if (req.files) {
+            if (req.files['studentPhoto']) updateData.studentPhoto = `/uploads/${req.files['studentPhoto'][0].filename}`;
+            if (req.files['fatherPhoto']) updateData.fatherPhoto = `/uploads/${req.files['fatherPhoto'][0].filename}`;
+            if (req.files['motherPhoto']) updateData.motherPhoto = `/uploads/${req.files['motherPhoto'][0].filename}`;
+            if (req.files['guardianPhoto']) updateData.guardianPhoto = `/uploads/${req.files['guardianPhoto'][0].filename}`;
+            if (req.files['previousResultSheet']) updateData.previousResultSheet = `/uploads/${req.files['previousResultSheet'][0].filename}`;
+            if (req.files['documentsPdf']) {
+                updateData.documentsPdf = req.files['documentsPdf'].map(f => `/uploads/${f.filename}`);
+            }
+        }
+
+        const student = await StudentProfile.findByIdAndUpdate(req.params.id, updateData, { new: true });
         if (!student) return res.status(404).json({ message: 'Student not found' });
         res.json(student);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 });

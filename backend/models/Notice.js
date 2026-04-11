@@ -11,7 +11,7 @@ const noticeSchema = new mongoose.Schema({
     },
     targetRole: {
         type: String,
-        enum: ['all', 'teacher', 'student_guardian'],
+        enum: ['all', 'teacher', 'student'],
         default: 'all'
     },
     priority: {

@@ -24,7 +24,7 @@ export default function EventCalendar() {
     });
 
     const categories = ['academic', 'sports', 'club', 'holiday', 'cultural', 'other'];
-    const targetRoles = ['all', 'teacher', 'student_guardian', 'admin'];
+    const targetRoles = ['all', 'teacher', 'student', 'admin'];
 
     // Fetch events for current month
     const fetchEvents = async () => {

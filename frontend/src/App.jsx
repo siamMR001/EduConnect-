@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,11 +12,19 @@ import StudentDirectory from './pages/StudentDirectory';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+  });
 
   useEffect(() => {
     // Check login state on mount and listen for storage changes
     const checkLoginStatus = () => {
       setIsLoggedIn(!!localStorage.getItem('token'));
+      try {
+        setUser(JSON.parse(localStorage.getItem('user')));
+      } catch {
+        setUser(null);
+      }
     };
 
     // Check on component mount
@@ -49,38 +57,51 @@ function App() {
       <div className="relative z-10 w-full h-full flex flex-col min-h-screen">
         {/* Header Navigation */}
         {isLoggedIn && (
-          <nav className="bg-white shadow-lg border-b border-gray-200">
+          <nav className="bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-8">
-                <Link to="/dashboard" className="text-2xl font-bold text-blue-600">
+                <Link to="/dashboard" className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
                   EduConnect
                 </Link>
                 <div className="hidden md:flex items-center gap-6">
-                  <Link to="/dashboard" className="text-gray-700 hover:text-blue-600 font-medium transition">
+                  <Link to="/dashboard" className="text-slate-300 hover:text-white font-medium transition-colors">
                     Dashboard
                   </Link>
-                  <Link to="/notices" className="text-gray-700 hover:text-blue-600 font-medium transition">
+                  <Link to="/notices" className="text-slate-300 hover:text-white font-medium transition-colors">
                     Notices
                   </Link>
-                  <Link to="/calendar" className="text-gray-700 hover:text-blue-600 font-medium transition">
+                  <Link to="/calendar" className="text-slate-300 hover:text-white font-medium transition-colors">
                     Calendar
                   </Link>
-                  <Link to="/profile" className="text-gray-700 hover:text-blue-600 font-medium transition">
-                    Profile
-                  </Link>
-                  <Link to="/directory" className="text-gray-700 hover:text-blue-600 font-medium transition">
-                    Directory
-                  </Link>
+
+                  {user?.role !== 'student' && (
+                    <Link to="/directory" className="text-slate-300 hover:text-white font-medium transition-colors">
+                      Directory
+                    </Link>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <NotificationsPanel />
+                
+                <Link 
+                  to="/profile" 
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 border border-white/20 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all group relative"
+                  title="View Profile"
+                >
+                  <User className="text-white w-5 h-5 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-[#1a1a2e] rounded-full"></div>
+                </Link>
+
+                <div className="w-px h-8 bg-white/10 hidden sm:block mx-1"></div>
+
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition"
+                  className="flex items-center justify-center sm:justify-start gap-2 p-2 sm:px-4 sm:py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg font-semibold transition-all"
+                  title="Logout"
                 >
                   <LogOut className="w-4 h-4" />
-                  Logout
+                  <span className="hidden sm:block">Logout</span>
                 </button>
               </div>
             </div>
@@ -90,13 +111,14 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 p-6 w-full">
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login />} />
             <Route path="/dashboard" element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" replace />} />
             <Route path="/notices" element={isLoggedIn ? <NoticeBoard /> : <Navigate to="/login" replace />} />
             <Route path="/calendar" element={isLoggedIn ? <EventCalendar /> : <Navigate to="/login" replace />} />
             <Route path="/apply" element={<AdmissionForm />} />
             <Route path="/profile" element={isLoggedIn ? <StudentProfile /> : <Navigate to="/login" replace />} />
-            <Route path="/directory" element={<StudentDirectory />} />
+            <Route path="/profile/:id" element={isLoggedIn ? <StudentProfile /> : <Navigate to="/login" replace />} />
+            <Route path="/directory" element={isLoggedIn && user?.role !== 'student' ? <StudentDirectory /> : <Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />} />
           </Routes>
         </main>

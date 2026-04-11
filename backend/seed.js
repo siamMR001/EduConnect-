@@ -45,7 +45,7 @@ async function seedDatabase() {
             name: 'John Doe',
             email: 'guardian@educonnect.com',
             password: 'password123',
-            role: 'student_guardian'
+            role: 'student'
         });
         console.log('Created Guardian:', guardian.email);
 

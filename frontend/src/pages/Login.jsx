@@ -5,11 +5,11 @@ import { User, Lock, Mail, ChevronRight, School } from 'lucide-react';
 const Login = () => {
     const navigate = useNavigate();
     const [isLoginMode, setIsLoginMode] = useState(true);
-    const [activeTab, setActiveTab] = useState('student_guardian');
+    const [activeTab, setActiveTab] = useState('student');
 
     // Remember me initiation
     const savedEmail = localStorage.getItem('rememberedEmail') || '';
-    const [formData, setFormData] = useState({ name: '', email: savedEmail, password: '' });
+    const [formData, setFormData] = useState({ name: '', email: savedEmail, password: '', studentId: '' });
     const [rememberMe, setRememberMe] = useState(!!savedEmail);
 
     const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +26,7 @@ const Login = () => {
             : { ...formData, role: activeTab };
 
         try {
-            const response = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -81,7 +81,7 @@ const Login = () => {
                 <div className="glass-panel p-8 animate-fade-in-up">
                     {/* Role Tabs */}
                     <div className="flex p-1 bg-black/20 rounded-xl mb-6">
-                        {['student_guardian', 'teacher', 'admin'].map((role) => (
+                        {['student', 'teacher', 'admin'].map((role) => (
                             <button
                                 key={role}
                                 onClick={() => setActiveTab(role)}
@@ -102,12 +102,12 @@ const Login = () => {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        {!isLoginMode && (
+                        {!isLoginMode && activeTab !== 'student' && (
                             <div className="relative group animate-fade-in-down">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={20} />
                                 <input
                                     type="text"
-                                    required={!isLoginMode}
+                                    required={!isLoginMode && activeTab !== 'student'}
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     className="input-field pl-10"
@@ -116,15 +116,29 @@ const Login = () => {
                             </div>
                         )}
 
+                        {!isLoginMode && activeTab === 'student' && (
+                            <div className="relative group animate-fade-in-down">
+                                <School className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={20} />
+                                <input
+                                    type="text"
+                                    required={!isLoginMode && activeTab === 'student'}
+                                    value={formData.studentId}
+                                    onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                                    className="input-field pl-10"
+                                    placeholder="Approved Student ID (e.g. 26090001)"
+                                />
+                            </div>
+                        )}
+
                         <div className="relative group">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={20} />
                             <input
-                                type="email"
+                                type={isLoginMode ? "text" : "email"}
                                 required
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 className="input-field pl-10"
-                                placeholder="Email address"
+                                placeholder={isLoginMode ? "Email address or Student ID" : "Email address"}
                             />
                         </div>
 

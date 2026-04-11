@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const StudentProfile = require('../models/StudentProfile');
+const Admission = require('../models/Admission');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id, role) => {
@@ -10,50 +11,69 @@ const generateToken = (id, role) => {
 
 exports.registerUser = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, studentId } = req.body;
+        const requestedRole = role || 'student';
+
+        // Additional validation for student
+        let existingProfile = null;
+        if (requestedRole === 'student') {
+            if (!studentId) {
+                return res.status(400).json({ message: 'Student/Application ID is required to create a student account' });
+            }
+
+            // Check if profile exists (meaning it was shifted by admin approval)
+            existingProfile = await StudentProfile.findOne({ studentId });
+            if (!existingProfile) {
+                return res.status(400).json({ message: 'No approved admission found for this Student ID. Please ensure your admission is approved.' });
+            }
+
+            // Check if it already has a user attached
+            if (existingProfile.user) {
+                return res.status(400).json({ message: 'An account has already been registered and linked to this Student ID' });
+            }
+        }
 
         const userExists = await User.findOne({ email });
         if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({ message: 'User (email) already exists' });
         }
 
         const user = await User.create({
-            name,
+            name: name || (existingProfile ? `${existingProfile.firstName} ${existingProfile.lastName}`.trim() : 'Student'),
             email,
             password,
-            role: role || 'student_guardian',
+            role: requestedRole,
         });
 
         if (user) {
-            // Auto-create StudentProfile for student_guardian role
-            if (role === 'student_guardian' || !role) {
+            // Update StudentProfile for student
+            if (requestedRole === 'student') {
                 try {
-                    const studentProfile = await StudentProfile.create({
-                        user: user._id,
-                        studentId: `${new Date().getFullYear()}${Math.random().toString().slice(2, 7)}`, // Auto-generated
-                        firstName: name.split(' ')[0],
-                        lastName: name.split(' ')[1] || '',
-                        dateOfBirth: new Date('2010-01-01'), // Default, can be updated later
-                        gender: 'Other',
-                        currentClass: '09',
-                        guardianName: name,
-                        guardianPhone: '',
-                        guardianEmail: email,
-                        status: 'active'
-                    });
-                    console.log('StudentProfile created:', studentProfile._id);
-                } catch (profileError) {
-                    console.log('Note: StudentProfile creation skipped, can be created later');
-                }
-            }
+                    existingProfile.user = user._id;
+                    await existingProfile.save();
+                    console.log('StudentProfile successfully claimed by new user:', existingProfile._id);
 
-            res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token: generateToken(user._id, user.role),
-            });
+                    return res.status(201).json({
+                        _id: user._id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        token: generateToken(user._id, user.role),
+                    });
+                } catch (profileError) {
+                    console.error('Failed to link profile:', profileError.message);
+                    await User.findByIdAndDelete(user._id);
+                    return res.status(500).json({ message: 'Internal error while claiming profile. Please contact admin.', error: profileError.message });
+                }
+            } else {
+                return res.status(201).json({
+                    _id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    token: generateToken(user._id, user.role),
+                });
+            }
         } else {
             res.status(400).json({ message: 'Invalid user data' });
         }
@@ -66,7 +86,17 @@ exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await User.findOne({ email });
+        let user;
+        if (!email.includes('@')) {
+            const studentProfile = await StudentProfile.findOne({ studentId: email });
+            if (studentProfile) {
+                user = await User.findById(studentProfile.user);
+            } else {
+                user = await User.findOne({ email });
+            }
+        } else {
+            user = await User.findOne({ email });
+        }
 
         if (user && (await user.matchPassword(password))) {
             res.json({

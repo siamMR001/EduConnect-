@@ -53,11 +53,11 @@ const Dashboard = () => {
                 fetch(`${import.meta.env.VITE_API_URL}/api/events`, { headers }),
                 fetch(`${import.meta.env.VITE_API_URL}/api/admissions`, { headers })
             ]);
-            const noticesData = noticesRes.ok ? await noticesRes.json() : [];
+            const noticesData = noticesRes.ok ? await noticesRes.json() : { notices: [] };
             const eventsData = eventsRes.ok ? await eventsRes.json() : [];
             const admissionsData = admissionsRes.ok ? await admissionsRes.json() : [];
 
-            setNotices(noticesData.length ? noticesData : MOCK_NOTICES);
+            setNotices((noticesData.notices && noticesData.notices.length) ? noticesData.notices : MOCK_NOTICES);
             setEvents(eventsData.length ? eventsData : MOCK_EVENTS);
             setAdmissions(admissionsData.length ? admissionsData : []);
         } catch (err) {
@@ -84,11 +84,7 @@ const Dashboard = () => {
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-    };
+
 
     const handleUpdateAdmissionStatus = async (id, status) => {
         try {
@@ -153,15 +149,18 @@ const Dashboard = () => {
                 body: JSON.stringify({ ...newNotice, author: user._id })
             });
             if (res.ok) {
-                const addedNotice = await res.json();
-                setNotices([addedNotice, ...notices]);
+                const responseData = await res.json();
+                setNotices([responseData.notice, ...notices]);
                 setShowNoticeModal(false);
                 setNewNotice({ title: '', content: '', priority: 'normal', targetRole: 'all' });
             } else {
-                alert("Failed to create notice.");
+                const errData = await res.json();
+                alert(`Failed to create notice: ${errData.message} ${errData.error || ''}`);
+                console.error("Notice creation error details:", errData);
             }
         } catch (err) {
-            console.error(err);
+            console.error("Fetch error:", err);
+            alert("Network error: Could not reach the server to post notice.");
         }
     };
 
@@ -215,8 +214,8 @@ const Dashboard = () => {
                 })
             });
             if (res.ok) {
-                const updated = await res.json();
-                setNotices(notices.map(n => n._id === updated._id ? updated : n));
+                const responseData = await res.json();
+                setNotices(notices.map(n => n._id === responseData.notice._id ? responseData.notice : n));
                 setEditingNotice(null);
             } else {
                 alert('Failed to update notice.');
@@ -239,9 +238,9 @@ const Dashboard = () => {
                 body: JSON.stringify({ ...newEvent, organizer: user._id })
             });
             if (res.ok) {
-                const addedEvent = await res.json();
+                const responseData = await res.json();
                 // Sort events by date ascending
-                setEvents([...events, addedEvent].sort((a, b) => new Date(a.date) - new Date(b.date)));
+                setEvents([...events, responseData.event].sort((a, b) => new Date(a.date) - new Date(b.date)));
                 setShowEventModal(false);
                 setNewEvent({ title: '', description: '', date: '', type: 'academic', link: '' });
             } else {
@@ -304,8 +303,8 @@ const Dashboard = () => {
                 })
             });
             if (res.ok) {
-                const updated = await res.json();
-                setEvents(events.map(ev => ev._id === updated._id ? updated : ev).sort((a, b) => new Date(a.date) - new Date(b.date)));
+                const responseData = await res.json();
+                setEvents(events.map(ev => ev._id === responseData.event._id ? responseData.event : ev).sort((a, b) => new Date(a.date) - new Date(b.date)));
                 setEditingEvent(null);
             } else {
                 alert('Failed to update event.');
@@ -334,9 +333,6 @@ const Dashboard = () => {
                             <span className="text-sm font-medium hidden md:block">Fee Config</span>
                         </button>
                     )}
-                    <button onClick={handleLogout} className="p-2 ml-2 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all transform hover:scale-105 active:scale-95 duration-200 border border-white/5">
-                        <LogOut size={20} />
-                    </button>
                 </div>
             </header>
 
@@ -631,22 +627,22 @@ const Dashboard = () => {
                                 <h4 className="text-xl font-bold border-b border-white/10 pb-3 mb-4 text-white">Uploaded Documents</h4>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {selectedApplication.studentPhoto && (
-                                        <a href={`http://localhost:5000${selectedApplication.studentPhoto}`} target="_blank" rel="noreferrer" className="flex flex-col items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors group">
+                                        <a href={`${import.meta.env.VITE_API_URL}${selectedApplication.studentPhoto}`} target="_blank" rel="noreferrer" className="flex flex-col items-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors group">
                                             <div className="w-16 h-16 bg-black/30 rounded-full mb-3 overflow-hidden border-2 border-primary/50 group-hover:border-primary transition-colors">
-                                                <img src={`http://localhost:5000${selectedApplication.studentPhoto}`} alt="Student" className="w-full h-full object-cover" />
+                                                <img src={`${import.meta.env.VITE_API_URL}${selectedApplication.studentPhoto}`} alt="Student" className="w-full h-full object-cover" />
                                             </div>
                                             <span className="text-sm font-medium text-slate-300">Student Photo</span>
                                         </a>
                                     )}
                                     {selectedApplication.previousResultSheet && (
-                                        <a href={`http://localhost:5000${selectedApplication.previousResultSheet}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
+                                        <a href={`${import.meta.env.VITE_API_URL}${selectedApplication.previousResultSheet}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
                                             <FileText size={32} className="text-blue-400 mb-2" />
                                             <span className="text-sm font-medium text-slate-300">Previous Result</span>
                                             <span className="text-xs text-slate-500 mt-1">View File</span>
                                         </a>
                                     )}
                                     {selectedApplication.documentsPdf && selectedApplication.documentsPdf.map((doc, idx) => (
-                                        <a key={idx} href={`http://localhost:5000${doc}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
+                                        <a key={idx} href={`${import.meta.env.VITE_API_URL}${doc}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors">
                                             <FileText size={32} className="text-pink-400 mb-2" />
                                             <span className="text-sm font-medium text-slate-300">Document {idx + 1}</span>
                                             <span className="text-xs text-slate-500 mt-1">View PDF</span>
@@ -715,7 +711,7 @@ const Dashboard = () => {
                                     <select value={newNotice.targetRole} onChange={e => setNewNotice({ ...newNotice, targetRole: e.target.value })} className="form-input w-full text-white bg-background-dark">
                                         <option value="all">Everyone</option>
                                         <option value="teacher">Teachers</option>
-                                        <option value="student_guardian">Students & Guardians</option>
+                                        <option value="student">Student</option>
                                     </select>
                                 </div>
                             </div>
@@ -828,7 +824,7 @@ const Dashboard = () => {
                                     <select value={editingNotice.targetRole} onChange={e => setEditingNotice({ ...editingNotice, targetRole: e.target.value })} className="form-input w-full text-white bg-background-dark">
                                         <option value="all">Everyone</option>
                                         <option value="teacher">Teachers</option>
-                                        <option value="student_guardian">Students & Guardians</option>
+                                        <option value="student">Student</option>
                                     </select>
                                 </div>
                             </div>
@@ -894,7 +890,7 @@ const Dashboard = () => {
 // Mock data for initial visual wow factor before real data is populated
 const MOCK_NOTICES = [
     { id: 1, title: 'Annual Sports Day 2026', content: 'We are excited to announce our upcoming sports day. Please ensure students come in their respective house colors. Registration for events closes next Friday.', priority: 'high', targetRole: 'all', createdAt: new Date().toISOString() },
-    { id: 2, title: 'Parent-Teacher Meeting', content: 'Mid-term PTM will be held this Saturday. Guardians are requested to book their slots via the portal early.', priority: 'urgent', targetRole: 'student_guardian', createdAt: new Date(Date.now() - 86400000).toISOString() },
+    { id: 2, title: 'Parent-Teacher Meeting', content: 'Mid-term PTM will be held this Saturday. Guardians are requested to book their slots via the portal early.', priority: 'urgent', targetRole: 'student', createdAt: new Date(Date.now() - 86400000).toISOString() },
     { id: 3, title: 'New Library Books Added', content: 'Our library has been updated with 500 new titles across science fiction, biographies, and academic references. Check them out!', priority: 'normal', targetRole: 'all', createdAt: new Date(Date.now() - 172800000).toISOString() },
 ];
 
