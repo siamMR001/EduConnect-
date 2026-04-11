@@ -48,7 +48,7 @@ exports.getEventById = async (req, res) => {
 // Create event
 exports.createEvent = async (req, res) => {
     try {
-        const { title, description, date, endDate, time, location, category, targetRole, capacity, color } = req.body;
+        const { title, description, date, endDate, time, location, category, targetRole, capacity, color, link } = req.body;
         const organizer = req.user._id;
 
         const event = await Event.create({
@@ -62,7 +62,8 @@ exports.createEvent = async (req, res) => {
             category: category || 'academic',
             targetRole: targetRole || 'all',
             capacity,
-            color: color || '#3B82F6'
+            color: color || '#3B82F6',
+            link: link || ''
         });
 
         // Send notifications
@@ -109,7 +110,7 @@ exports.updateEvent = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to update this event' });
         }
 
-        const { title, description, date, endDate, time, location, category, targetRole, capacity, color } = req.body;
+        const { title, description, date, endDate, time, location, category, targetRole, capacity, color, link } = req.body;
 
         if (title) event.title = title;
         if (description) event.description = description;
@@ -121,6 +122,7 @@ exports.updateEvent = async (req, res) => {
         if (targetRole) event.targetRole = targetRole;
         if (capacity) event.capacity = capacity;
         if (color) event.color = color;
+        if (link !== undefined) event.link = link;
 
         event.updatedAt = Date.now();
         await event.save();

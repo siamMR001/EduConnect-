@@ -21,10 +21,10 @@ router.delete('/:id/unregister', protect, eventController.unregisterFromEvent);
 // Update event
 router.put('/:id', async (req, res) => {
     try {
-        const { title, description, date, location, type } = req.body;
+        const { title, description, date, location, type, link } = req.body;
         const event = await Event.findByIdAndUpdate(
             req.params.id,
-            { title, description, date, location, type },
+            { title, description, date, location, type, link },
             { new: true }
         );
         if (!event) return res.status(404).json({ message: 'Event not found' });

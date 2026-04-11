@@ -19,7 +19,7 @@ const Dashboard = () => {
 
     // Form state
     const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal', targetRole: 'all' });
-    const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', type: 'academic' });
+    const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', type: 'academic', link: '' });
 
     // Edit state
     const [editingNotice, setEditingNotice] = useState(null);
@@ -46,10 +46,12 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Authorization': `Bearer ${token}` };
             const [noticesRes, eventsRes, admissionsRes] = await Promise.all([
-                fetch('http://localhost:5000/api/notices'),
-                fetch('http://localhost:5000/api/events'),
-                fetch('http://localhost:5000/api/admissions')
+                fetch(`${import.meta.env.VITE_API_URL}/api/notices`, { headers }),
+                fetch(`${import.meta.env.VITE_API_URL}/api/events`, { headers }),
+                fetch(`${import.meta.env.VITE_API_URL}/api/admissions`, { headers })
             ]);
             const noticesData = noticesRes.ok ? await noticesRes.json() : [];
             const eventsData = eventsRes.ok ? await eventsRes.json() : [];
@@ -67,9 +69,12 @@ const Dashboard = () => {
 
     const handleSaveSettings = async () => {
         try {
-            await fetch('http://localhost:5000/api/settings', {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: JSON.stringify({ admissionFee: Number(admissionFee) })
             });
             setIsSettingsOpen(false);
@@ -87,9 +92,12 @@ const Dashboard = () => {
 
     const handleUpdateAdmissionStatus = async (id, status) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/admissions/${id}/status`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/${id}/status`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: JSON.stringify({ status })
             });
 
@@ -115,8 +123,9 @@ const Dashboard = () => {
 
     const handleApproveAllPending = async () => {
         try {
-            const res = await fetch(`http://localhost:5000/api/admissions/approve-all-pending`, {
-                method: 'PATCH'
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/approve-all-pending`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             const data = await res.json();
             if (res.ok) {
@@ -135,9 +144,12 @@ const Dashboard = () => {
     const handleAddNotice = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`http://localhost:5000/api/notices`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notices`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: JSON.stringify({ ...newNotice, author: user._id })
             });
             if (res.ok) {
@@ -160,8 +172,18 @@ const Dashboard = () => {
             return;
         }
         setConfirmDeleteNoticeId(null);
+
+        // If it's a mock notice (no _id length 24), just remove locally
+        if (!String(id).match(/^[0-9a-fA-F]{24}$/)) {
+            setNotices(notices.filter(n => (n._id || n.id) !== id));
+            return;
+        }
+
         try {
-            await fetch(`http://localhost:5000/api/notices/${id}`, { method: 'DELETE' });
+            await fetch(`${import.meta.env.VITE_API_URL}/api/notices/${id}`, { 
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
             setNotices(notices.filter(n => n._id !== id));
         } catch (err) {
             console.error(err);
@@ -170,10 +192,21 @@ const Dashboard = () => {
 
     const handleUpdateNotice = async (e) => {
         e.preventDefault();
+
+        // If mock notice, update locally
+        if (!editingNotice._id) {
+            setNotices(notices.map(n => n.id === editingNotice.id ? { ...editingNotice } : n));
+            setEditingNotice(null);
+            return;
+        }
+
         try {
-            const res = await fetch(`http://localhost:5000/api/notices/${editingNotice._id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notices/${editingNotice._id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: JSON.stringify({
                     title: editingNotice.title,
                     content: editingNotice.content,
@@ -197,9 +230,12 @@ const Dashboard = () => {
     const handleAddEvent = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`http://localhost:5000/api/events`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/events`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: JSON.stringify({ ...newEvent, organizer: user._id })
             });
             if (res.ok) {
@@ -207,7 +243,7 @@ const Dashboard = () => {
                 // Sort events by date ascending
                 setEvents([...events, addedEvent].sort((a, b) => new Date(a.date) - new Date(b.date)));
                 setShowEventModal(false);
-                setNewEvent({ title: '', description: '', date: '', type: 'academic' });
+                setNewEvent({ title: '', description: '', date: '', type: 'academic', link: '' });
             } else {
                 alert("Failed to create event.");
             }
@@ -223,8 +259,18 @@ const Dashboard = () => {
             return;
         }
         setConfirmDeleteEventId(null);
+
+        // If it's a mock event, just remove locally
+        if (!String(id).match(/^[0-9a-fA-F]{24}$/)) {
+            setEvents(events.filter(e => (e._id || e.id) !== id));
+            return;
+        }
+
         try {
-            await fetch(`http://localhost:5000/api/events/${id}`, { method: 'DELETE' });
+            await fetch(`${import.meta.env.VITE_API_URL}/api/events/${id}`, { 
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
             setEvents(events.filter(e => e._id !== id));
         } catch (err) {
             console.error(err);
@@ -233,16 +279,28 @@ const Dashboard = () => {
 
     const handleUpdateEvent = async (e) => {
         e.preventDefault();
+
+        // If mock event, update locally
+        if (!editingEvent._id) {
+            setEvents(events.map(ev => ev.id === editingEvent.id ? { ...editingEvent } : ev).sort((a, b) => new Date(a.date) - new Date(b.date)));
+            setEditingEvent(null);
+            return;
+        }
+
         try {
             // Format the date correctly for the API
-            const res = await fetch(`http://localhost:5000/api/events/${editingEvent._id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${editingEvent._id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: JSON.stringify({
                     title: editingEvent.title,
                     description: editingEvent.description,
                     date: editingEvent.date,
-                    type: editingEvent.type
+                    type: editingEvent.type,
+                    link: editingEvent.link
                 })
             });
             if (res.ok) {
@@ -351,19 +409,19 @@ const Dashboard = () => {
                         <div className="grid gap-4">
                             {notices.map((notice) => (
                                 <div key={notice._id || notice.id} className="glass-panel p-5 border-l-4 border-l-primary hover:border-l-primary-light transition-all duration-300 transform hover:-translate-y-1 relative group">
-                                    {(user.role === 'admin' || user.role === 'teacher') && notice._id && (
+                                    {(user.role === 'admin' || user.role === 'teacher') && (
                                         <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                             <button onClick={(e) => { e.stopPropagation(); setEditingNotice({ ...notice }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
                                                 <Pencil size={14} />
                                             </button>
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice._id); }}
-                                                className={`p-1.5 rounded-lg transition-all text-sm font-bold flex items-center gap-1 ${confirmDeleteNoticeId === notice._id
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice._id || notice.id); }}
+                                                className={`p-1.5 rounded-lg transition-all text-sm font-bold flex items-center gap-1 ${confirmDeleteNoticeId === (notice._id || notice.id)
                                                     ? 'bg-red-500 text-white px-2'
                                                     : 'bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400'
                                                     }`}
                                             >
-                                                {confirmDeleteNoticeId === notice._id ? 'Sure?' : <Trash2 size={14} />}
+                                                {confirmDeleteNoticeId === (notice._id || notice.id) ? 'Sure?' : <Trash2 size={14} />}
                                             </button>
                                         </div>
                                     )}
@@ -392,13 +450,16 @@ const Dashboard = () => {
 
                     {/* Calendar / Events */}
                     <div className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-                                <Calendar className="text-pink-400" size={24} />
-                                Upcoming Events
+                        <div className="flex justify-between items-start gap-4">
+                            <h2 className="text-xl font-bold flex items-start gap-2 text-white">
+                                <Calendar className="text-primary-light shrink-0 mt-0.5" size={24} />
+                                <span>
+                                    Upcoming Events
+                                    <span className="block text-sm font-normal text-slate-400 mt-0.5">&amp; Club Activities</span>
+                                </span>
                             </h2>
                             {(user.role === 'admin' || user.role === 'teacher') && (
-                                <button onClick={() => setShowEventModal(true)} className="btn-primary flex items-center gap-1 text-sm py-1.5 px-3">
+                                <button onClick={() => setShowEventModal(true)} className="btn-primary flex items-center gap-1 text-sm py-1.5 px-3 shrink-0">
                                     <Plus size={16} /> New Event
                                 </button>
                             )}
@@ -408,19 +469,19 @@ const Dashboard = () => {
                             <div className="space-y-5">
                                 {events.map((evt) => (
                                     <div key={evt._id || evt.id} className="group flex gap-4 items-start p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 cursor-pointer relative">
-                                        {(user.role === 'admin' || user.role === 'teacher') && evt._id && (
+                                        {(user.role === 'admin' || user.role === 'teacher') && (
                                             <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                                 <button onClick={(e) => { e.stopPropagation(); setEditingEvent({ ...evt, date: new Date(evt.date).toISOString().slice(0, 16) }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
                                                     <Pencil size={14} />
                                                 </button>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteEvent(evt._id); }}
-                                                    className={`p-1.5 rounded-lg transition-all text-sm font-bold flex items-center gap-1 ${confirmDeleteEventId === evt._id
-                                                            ? 'bg-red-500 text-white px-2'
-                                                            : 'bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400'
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteEvent(evt._id || evt.id); }}
+                                                    className={`p-1.5 rounded-lg transition-all text-sm font-bold flex items-center gap-1 ${confirmDeleteEventId === (evt._id || evt.id)
+                                                        ? 'bg-red-500 text-white px-2'
+                                                        : 'bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400'
                                                         }`}
                                                 >
-                                                    {confirmDeleteEventId === evt._id ? 'Sure?' : <Trash2 size={14} />}
+                                                    {confirmDeleteEventId === (evt._id || evt.id) ? 'Sure?' : <Trash2 size={14} />}
                                                 </button>
                                             </div>
                                         )}
@@ -428,13 +489,23 @@ const Dashboard = () => {
                                             <span className="text-xs text-primary-light font-bold uppercase tracking-wider">
                                                 {new Date(evt.date).toLocaleString('default', { month: 'short' })}
                                             </span>
-                                            <span className="text-xl text-white font-bold">
+                                            <span className="text-xl text-white font-bold leading-none mt-1">
                                                 {new Date(evt.date).getDate()}
                                             </span>
+                                            <span className="text-[9px] text-slate-400 mt-1.5 font-medium tracking-wider">
+                                                {new Date(evt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
                                         </div>
-                                        <div>
-                                            <h4 className="text-white font-medium mb-1 group-hover:text-primary-light transition-colors">{evt.title}</h4>
+                                        <div className="flex-1">
+                                            <div className="mb-1">
+                                                <h4 className="text-white font-medium group-hover:text-primary-light transition-colors">{evt.title}</h4>
+                                            </div>
                                             <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{evt.description}</p>
+                                            {evt.link && (
+                                                <a href={evt.link.startsWith('http') ? evt.link : `https://${evt.link}`} target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors" onClick={e => e.stopPropagation()}>
+                                                    🖇️ View Link
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -687,6 +758,10 @@ const Dashboard = () => {
                                     </select>
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-slate-400 text-sm font-semibold mb-2">Event Link (Optional)</label>
+                                <input type="url" placeholder="https://meet.google.com/..." value={newEvent.link} onChange={e => setNewEvent({ ...newEvent, link: e.target.value })} className="form-input w-full" />
+                            </div>
                             <div className="flex justify-end gap-4 mt-8 pt-4 border-t border-white/10">
                                 <button type="button" onClick={() => setShowEventModal(false)} className="btn-secondary py-2 px-6">Cancel</button>
                                 <button type="submit" className="btn-primary py-2 px-6">Add Event</button>
@@ -798,6 +873,10 @@ const Dashboard = () => {
                                         <option value="other">Other</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-slate-400 text-sm font-semibold mb-2">Event Link (Optional)</label>
+                                <input type="url" placeholder="https://meet.google.com/..." value={editingEvent.link || ''} onChange={e => setEditingEvent({ ...editingEvent, link: e.target.value })} className="form-input w-full" />
                             </div>
                             <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-white/10">
                                 <button type="button" onClick={() => setEditingEvent(null)} className="btn-secondary py-2 px-6">Cancel</button>
