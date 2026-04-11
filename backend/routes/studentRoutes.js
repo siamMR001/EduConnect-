@@ -137,6 +137,12 @@ router.put('/:id', function (req, res, next) {
         if (updateData.academicHistory && typeof updateData.academicHistory === 'string') {
             updateData.academicHistory = JSON.parse(updateData.academicHistory);
         }
+        if (updateData.user && typeof updateData.user === 'string') {
+            try {
+                const parsedUser = JSON.parse(updateData.user);
+                updateData.user = parsedUser._id || parsedUser;
+            } catch(e) {}
+        }
 
         // Map explicitly uploaded files if any exist
         if (req.files) {

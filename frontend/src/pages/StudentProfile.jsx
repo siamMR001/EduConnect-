@@ -56,7 +56,8 @@ const StudentProfile = () => {
             const form = new FormData();
             
             Object.keys(formData).forEach(key => {
-                if (['studentPhoto', 'previousResultSheet', 'documentsPdf', 'doctorSignature', 'fatherPhoto', 'motherPhoto', 'guardianPhoto'].includes(key)) return;
+                if (['studentPhoto', 'previousResultSheet', 'documentsPdf', 'doctorSignature', 'fatherPhoto', 'motherPhoto', 'guardianPhoto', 'user', '_id', '__v', 'createdAt'].includes(key)) return;
+
                 
                 if (typeof formData[key] === 'object' && formData[key] !== null) {
                     form.append(key, JSON.stringify(formData[key]));
