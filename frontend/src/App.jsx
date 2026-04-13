@@ -9,6 +9,12 @@ import NoticeBoard from './pages/NoticeBoard';
 import EventCalendar from './pages/EventCalendar';
 import NotificationsPanel from './components/NotificationsPanel';
 import StudentDirectory from './pages/StudentDirectory';
+import StudentAssignments from './pages/StudentAssignments';
+import TeacherAssignments from './pages/TeacherAssignments';
+import AdminTeacherDashboard from './pages/AdminTeacherDashboard';
+import TeacherRegister from './pages/TeacherRegister';
+import AdminGradeConfig from './pages/AdminGradeConfig';
+import AdminStudentAssignment from './pages/AdminStudentAssignment';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -73,11 +79,30 @@ function App() {
                   <Link to="/calendar" className="text-slate-300 hover:text-white font-medium transition-colors">
                     Calendar
                   </Link>
+                  {(user?.role === 'student' || user?.role === 'teacher') && (
+                    <Link to={user?.role === 'student' ? '/student-assignments' : '/teacher-assignments'} className="text-slate-300 hover:text-white font-medium transition-colors">
+                      Assignments
+                    </Link>
+                  )}
 
                   {user?.role !== 'student' && (
                     <Link to="/directory" className="text-slate-300 hover:text-white font-medium transition-colors">
                       Directory
                     </Link>
+                  )}
+
+                  {user?.role === 'admin' && (
+                    <>
+                      <Link to="/admin/teachers" className="text-slate-300 hover:text-white font-medium transition-colors">
+                        Teachers
+                      </Link>
+                      <Link to="/admin/grades" className="text-slate-300 hover:text-white font-medium transition-colors">
+                        Grades
+                      </Link>
+                      <Link to="/admin/students" className="text-slate-300 hover:text-white font-medium transition-colors">
+                        Students
+                      </Link>
+                    </>
                   )}
                 </div>
               </div>
@@ -115,10 +140,16 @@ function App() {
             <Route path="/dashboard" element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" replace />} />
             <Route path="/notices" element={isLoggedIn ? <NoticeBoard /> : <Navigate to="/login" replace />} />
             <Route path="/calendar" element={isLoggedIn ? <EventCalendar /> : <Navigate to="/login" replace />} />
+            <Route path="/student-assignments" element={isLoggedIn && user?.role === 'student' ? <StudentAssignments /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/teacher-assignments" element={isLoggedIn && user?.role === 'teacher' ? <TeacherAssignments /> : <Navigate to="/dashboard" replace />} />
             <Route path="/apply" element={<AdmissionForm />} />
             <Route path="/profile" element={isLoggedIn ? <StudentProfile /> : <Navigate to="/login" replace />} />
             <Route path="/profile/:id" element={isLoggedIn ? <StudentProfile /> : <Navigate to="/login" replace />} />
             <Route path="/directory" element={isLoggedIn && user?.role !== 'student' ? <StudentDirectory /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/teacher-register" element={<TeacherRegister />} />
+            <Route path="/admin/teachers" element={isLoggedIn && user?.role === 'admin' ? <AdminTeacherDashboard /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/admin/grades" element={isLoggedIn && user?.role === 'admin' ? <AdminGradeConfig /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/admin/students" element={isLoggedIn && user?.role === 'admin' ? <AdminStudentAssignment /> : <Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />} />
           </Routes>
         </main>

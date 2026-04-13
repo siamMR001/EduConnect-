@@ -15,6 +15,7 @@ const studentProfileSchema = new mongoose.Schema({
     currentClass: { type: String, required: true },
     section: { type: String, default: 'A' },
     rollNumber: { type: Number },
+    academicYear: { type: String }, // e.g., "2025-2026"
     previousSchool: { type: String },
     previousResultSheet: { type: String },
     

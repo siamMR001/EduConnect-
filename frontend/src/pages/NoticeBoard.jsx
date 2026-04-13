@@ -102,9 +102,9 @@ export default function NoticeBoard() {
     // Priority badge color
     const getPriorityColor = (priority) => {
         const colors = {
-            normal: 'bg-blue-100 text-blue-800',
-            high: 'bg-orange-100 text-orange-800',
-            urgent: 'bg-red-100 text-red-800'
+            normal: 'bg-blue-900/30 text-blue-200',
+            high: 'bg-orange-900/30 text-orange-200',
+            urgent: 'bg-red-900/30 text-red-200'
         };
         return colors[priority] || colors.normal;
     };
@@ -123,17 +123,17 @@ export default function NoticeBoard() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto py-8 px-4">
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                        <Bell className="w-8 h-8 text-blue-600" />
-                        <h1 className="text-4xl font-bold text-gray-900">Notice Board</h1>
+                        <Bell className="w-8 h-8 text-primary-light" />
+                        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white">Notice Board</h1>
                     </div>
                     <button
                         onClick={() => setShowCreateForm(!showCreateForm)}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition"
+                        className="btn-primary flex items-center gap-2"
                     >
                         <Plus className="w-5 h-5" />
                         New Notice
@@ -142,7 +142,7 @@ export default function NoticeBoard() {
 
                 {/* Error Message */}
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2 mb-4">
+                    <div className="glass-panel bg-red-500/10 border-red-500/30 text-red-200 px-4 py-3 flex items-center gap-2 mb-4">
                         <AlertCircle className="w-5 h-5" />
                         {error}
                     </div>
@@ -151,12 +151,12 @@ export default function NoticeBoard() {
 
             {/* Create Notice Form */}
             {showCreateForm && (
-                <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-200">
+                <div className="glass-panel p-8 mb-8">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">Create New Notice</h2>
+                        <h2 className="text-2xl font-bold text-white">Create New Notice</h2>
                         <button
                             onClick={() => setShowCreateForm(false)}
-                            className="text-gray-500 hover:text-gray-700"
+                            className="text-slate-400 hover:text-white"
                         >
                             <X className="w-6 h-6" />
                         </button>
@@ -164,35 +164,35 @@ export default function NoticeBoard() {
 
                     <form onSubmit={handleCreateNotice} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Title</label>
+                            <label className="block text-sm font-semibold text-slate-200 mb-2">Title</label>
                             <input
                                 type="text"
                                 required
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="input-field"
                                 placeholder="Enter notice title"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Content</label>
+                            <label className="block text-sm font-semibold text-slate-200 mb-2">Content</label>
                             <textarea
                                 required
                                 value={formData.content}
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                                className="input-field h-32"
                                 placeholder="Enter notice content"
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Category</label>
                                 <select
                                     value={formData.category}
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 >
                                     {categories.map(cat => (
                                         <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
@@ -201,11 +201,11 @@ export default function NoticeBoard() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Priority</label>
                                 <select
                                     value={formData.priority}
                                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 >
                                     {priorities.map(p => (
                                         <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
@@ -216,11 +216,11 @@ export default function NoticeBoard() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Target Role</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Target Role</label>
                                 <select
                                     value={formData.targetRole}
                                     onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 >
                                     {targetRoles.map(role => (
                                         <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
@@ -229,27 +229,27 @@ export default function NoticeBoard() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Expiry Date (Optional)</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Expiry Date (Optional)</label>
                                 <input
                                     type="date"
                                     value={formData.expiryDate}
                                     onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Attachments</label>
+                            <label className="block text-sm font-semibold text-slate-200 mb-2">Attachments</label>
                             <input
                                 type="file"
                                 multiple
                                 onChange={(e) => setAttachedFiles(Array.from(e.target.files))}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="input-field"
                                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                             />
                             {attachedFiles.length > 0 && (
-                                <p className="text-sm text-gray-600 mt-2">{attachedFiles.length} file(s) selected</p>
+                                <p className="text-sm text-slate-400 mt-2">{attachedFiles.length} file(s) selected</p>
                             )}
                         </div>
 
@@ -257,13 +257,13 @@ export default function NoticeBoard() {
                             <button
                                 type="button"
                                 onClick={() => setShowCreateForm(false)}
-                                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition"
+                                className="btn-secondary"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+                                className="btn-primary"
                             >
                                 Post Notice
                             </button>
@@ -273,14 +273,14 @@ export default function NoticeBoard() {
             )}
 
             {/* Filters */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-200">
+            <div className="glass-panel p-6 mb-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input
                         type="text"
                         placeholder="Search notices..."
                         value={filters.search}
                         onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="input-field"
                     />
 
                     <select
@@ -289,7 +289,7 @@ export default function NoticeBoard() {
                             setFilters({ ...filters, category: e.target.value });
                             setCurrentPage(1);
                         }}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="input-field"
                     >
                         <option value="">All Categories</option>
                         {categories.map(cat => (
@@ -303,7 +303,7 @@ export default function NoticeBoard() {
                             setFilters({ ...filters, priority: e.target.value });
                             setCurrentPage(1);
                         }}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="input-field"
                     >
                         <option value="">All Priorities</option>
                         {priorities.map(p => (
@@ -316,7 +316,7 @@ export default function NoticeBoard() {
                             setFilters({ category: '', priority: '', search: '' });
                             setCurrentPage(1);
                         }}
-                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                        className="btn-secondary"
                     >
                         Reset Filters
                     </button>
@@ -326,23 +326,23 @@ export default function NoticeBoard() {
             {/* Loading */}
             {loading ? (
                 <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                    <p className="text-gray-600 mt-4">Loading notices...</p>
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-light"></div>
+                    <p className="text-slate-400 mt-4">Loading notices...</p>
                 </div>
             ) : (
                 <>
                     {/* Notices List */}
                     <div className="space-y-4 mb-8">
                         {filteredNotices.length === 0 ? (
-                            <div className="text-center py-12 bg-white rounded-xl">
-                                <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-600 text-lg">No notices found</p>
+                            <div className="text-center py-12 glass-panel rounded-xl">
+                                <Bell className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+                                <p className="text-slate-400 text-lg">No notices found</p>
                             </div>
                         ) : (
                             filteredNotices.map(notice => (
                                 <div
                                     key={notice._id}
-                                    className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition cursor-pointer"
+                                    className="glass-panel p-6 hover:border-primary-light/50 transition cursor-pointer"
                                     onClick={() => setSelectedNotice(notice)}
                                 >
                                     <div className="flex items-start justify-between">
@@ -351,13 +351,13 @@ export default function NoticeBoard() {
                                                 <span className="text-2xl mt-1">{getCategoryIcon(notice.category)}</span>
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <h3 className="text-xl font-bold text-gray-900">{notice.title}</h3>
+                                                        <h3 className="text-xl font-bold text-white">{notice.title}</h3>
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPriorityColor(notice.priority)}`}>
                                                             {notice.priority.toUpperCase()}
                                                         </span>
                                                     </div>
-                                                    <p className="text-gray-600 line-clamp-2">{notice.content}</p>
-                                                    <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                                                    <p className="text-slate-300 line-clamp-2">{notice.content}</p>
+                                                    <div className="flex items-center gap-4 mt-3 text-sm text-slate-400">
                                                         <span>Posted by {notice.author?.name || 'Admin'}</span>
                                                         <span>{notice.category.charAt(0).toUpperCase() + notice.category.slice(1)}</span>
                                                         <span className="flex items-center gap-1">
@@ -372,15 +372,15 @@ export default function NoticeBoard() {
                                     </div>
 
                                     {notice.attachments && notice.attachments.length > 0 && (
-                                        <div className="mt-4 border-t pt-4">
-                                            <p className="text-sm font-semibold text-gray-700 mb-2">Attachments ({notice.attachments.length})</p>
+                                        <div className="mt-4 border-t border-white/10 pt-4">
+                                            <p className="text-sm font-semibold text-slate-300 mb-2">Attachments ({notice.attachments.length})</p>
                                             <div className="flex gap-2 flex-wrap">
                                                 {notice.attachments.map((attachment, idx) => (
                                                     <a
                                                         key={idx}
                                                         href={`${import.meta.env.VITE_API_URL}/${attachment.filepath}`}
                                                         download
-                                                        className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
+                                                        className="flex items-center gap-2 px-3 py-1 bg-primary/20 text-primary-light rounded-lg hover:bg-primary/30 transition text-sm font-medium"
                                                     >
                                                         <FileDown className="w-4 h-4" />
                                                         {attachment.filename}
@@ -403,8 +403,8 @@ export default function NoticeBoard() {
                                     onClick={() => setCurrentPage(page)}
                                     className={`px-4 py-2 rounded-lg font-semibold transition ${
                                         currentPage === page
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                            ? 'btn-primary'
+                                            : 'btn-secondary'
                                     }`}
                                 >
                                     {page}
@@ -417,13 +417,13 @@ export default function NoticeBoard() {
 
             {/* Notice Detail Modal */}
             {selectedNotice && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-96 overflow-y-auto">
-                        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 p-6 flex items-center justify-between text-white">
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-panel max-w-2xl w-full max-h-96 overflow-y-auto">
+                        <div className="sticky top-0 bg-gradient-to-r from-primary to-primary-dark p-6 flex items-center justify-between text-white rounded-t-2xl">
                             <h2 className="text-2xl font-bold">{selectedNotice.title}</h2>
                             <button
                                 onClick={() => setSelectedNotice(null)}
-                                className="hover:bg-white hover:bg-opacity-20 p-1 rounded transition"
+                                className="hover:bg-white/20 p-1 rounded transition"
                             >
                                 <X className="w-6 h-6" />
                             </button>
@@ -434,16 +434,16 @@ export default function NoticeBoard() {
                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPriorityColor(selectedNotice.priority)}`}>
                                     {selectedNotice.priority.toUpperCase()}
                                 </span>
-                                <span className="text-sm text-gray-600">
+                                <span className="text-sm text-slate-400">
                                     By {selectedNotice.author?.name || 'Admin'} • {new Date(selectedNotice.createdAt).toLocaleDateString()}
                                 </span>
                             </div>
 
-                            <p className="text-gray-700 leading-relaxed mb-6">{selectedNotice.content}</p>
+                            <p className="text-slate-200 leading-relaxed mb-6">{selectedNotice.content}</p>
 
                             {selectedNotice.attachments && selectedNotice.attachments.length > 0 && (
-                                <div className="border-t pt-6">
-                                    <p className="text-sm font-semibold text-gray-700 mb-3">Attachments</p>
+                                <div className="border-t border-white/10 pt-6">
+                                    <p className="text-sm font-semibold text-slate-300 mb-3">Attachments</p>
                                     <div className="flex gap-2 flex-wrap">
                                         {selectedNotice.attachments.map((attachment, idx) => (
                                             <a

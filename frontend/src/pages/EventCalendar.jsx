@@ -146,17 +146,17 @@ export default function EventCalendar() {
         : events;
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto py-8 px-4">
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                        <Calendar className="w-8 h-8 text-blue-600" />
-                        <h1 className="text-4xl font-bold text-gray-900">Event Calendar</h1>
+                        <Calendar className="w-8 h-8 text-primary-light" />
+                        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white">Event Calendar</h1>
                     </div>
                     <button
                         onClick={() => setShowCreateForm(!showCreateForm)}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition"
+                        className="btn-primary flex items-center gap-2"
                     >
                         <Plus className="w-5 h-5" />
                         New Event
@@ -166,12 +166,12 @@ export default function EventCalendar() {
 
             {/* Create Event Form */}
             {showCreateForm && (
-                <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-200">
+                <div className="glass-panel p-8 mb-8">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">Create New Event</h2>
+                        <h2 className="text-2xl font-bold text-white">Create New Event</h2>
                         <button
                             onClick={() => setShowCreateForm(false)}
-                            className="text-gray-500 hover:text-gray-700"
+                            className="text-slate-400 hover:text-white"
                         >
                             <X className="w-6 h-6" />
                         </button>
@@ -179,68 +179,68 @@ export default function EventCalendar() {
 
                     <form onSubmit={handleCreateEvent} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Event Title</label>
+                            <label className="block text-sm font-semibold text-slate-200 mb-2">Event Title</label>
                             <input
                                 type="text"
                                 required
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="input-field"
                                 placeholder="Enter event title"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                            <label className="block text-sm font-semibold text-slate-200 mb-2">Description</label>
                             <textarea
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                                className="input-field h-24"
                                 placeholder="Event description"
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Start Date</label>
                                 <input
                                     type="date"
                                     required
                                     value={formData.date}
                                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">End Date</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">End Date</label>
                                 <input
                                     type="date"
                                     value={formData.endDate}
                                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Time (HH:MM)</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Time (HH:MM)</label>
                                 <input
                                     type="time"
                                     value={formData.time}
                                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Location</label>
                                 <input
                                     type="text"
                                     value={formData.location}
                                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                     placeholder="Event location"
                                 />
                             </div>
@@ -248,11 +248,11 @@ export default function EventCalendar() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Category</label>
                                 <select
                                     value={formData.category}
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 >
                                     {categories.map(cat => (
                                         <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
@@ -261,11 +261,11 @@ export default function EventCalendar() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Target Role</label>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Target Role</label>
                                 <select
                                     value={formData.targetRole}
                                     onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-field"
                                 >
                                     {targetRoles.map(role => (
                                         <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
@@ -275,12 +275,12 @@ export default function EventCalendar() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Capacity (Optional)</label>
+                            <label className="block text-sm font-semibold text-slate-200 mb-2">Capacity (Optional)</label>
                             <input
                                 type="number"
                                 value={formData.capacity}
                                 onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="input-field"
                                 placeholder="Maximum participants"
                                 min="1"
                             />
@@ -290,13 +290,13 @@ export default function EventCalendar() {
                             <button
                                 type="button"
                                 onClick={() => setShowCreateForm(false)}
-                                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition"
+                                className="btn-secondary"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+                                className="btn-primary"
                             >
                                 Create Event
                             </button>
@@ -307,42 +307,42 @@ export default function EventCalendar() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Calendar */}
-                <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                <div className="lg:col-span-2 glass-panel p-6">
                     {/* Month navigation */}
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">{monthName}</h2>
+                        <h2 className="text-2xl font-bold text-white">{monthName}</h2>
                         <div className="flex gap-2">
                             <button
                                 onClick={goToPreviousMonth}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                                className="p-2 hover:bg-white/10 rounded-lg transition"
                             >
-                                <ChevronLeft className="w-6 h-6 text-gray-600" />
+                                <ChevronLeft className="w-6 h-6 text-slate-300" />
                             </button>
                             <button
                                 onClick={() => setCurrentDate(new Date())}
-                                className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-semibold hover:bg-blue-200 transition"
+                                className="px-4 py-2 bg-primary/30 text-primary-light rounded-lg font-semibold hover:bg-primary/50 transition"
                             >
                                 Today
                             </button>
                             <button
                                 onClick={goToNextMonth}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                                className="p-2 hover:bg-white/10 rounded-lg transition"
                             >
-                                <ChevronRight className="w-6 h-6 text-gray-600" />
+                                <ChevronRight className="w-6 h-6 text-slate-300" />
                             </button>
                         </div>
                     </div>
 
                     {loading ? (
                         <div className="text-center py-12">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-light"></div>
                         </div>
                     ) : (
                         <>
                             {/* Weekday headers */}
                             <div className="grid grid-cols-7 gap-2 mb-2">
                                 {weekDays.map(day => (
-                                    <div key={day} className="text-center font-semibold text-gray-600 py-2">
+                                    <div key={day} className="text-center font-semibold text-slate-300 py-2">
                                         {day}
                                     </div>
                                 ))}
@@ -352,7 +352,7 @@ export default function EventCalendar() {
                             <div className="grid grid-cols-7 gap-2">
                                 {calendarDays.map((day, idx) => {
                                     if (!day) {
-                                        return <div key={`empty-${idx}`} className="h-24 bg-gray-50 rounded-lg"></div>;
+                                        return <div key={`empty-${idx}`} className="h-24 bg-white/5 rounded-lg"></div>;
                                     }
 
                                     const dayEvents = getEventsForDate(day);
@@ -367,15 +367,15 @@ export default function EventCalendar() {
                                             onClick={() => setSelectedDate(day)}
                                             className={`h-24 p-2 rounded-lg cursor-pointer transition border-2 ${
                                                 selectedDate === day
-                                                    ? 'border-blue-600 bg-blue-50'
+                                                    ? 'border-primary-light bg-primary/20'
                                                     : isToday
-                                                    ? 'border-blue-400 bg-blue-50'
+                                                    ? 'border-primary bg-primary/10'
                                                     : dayEvents.length > 0
-                                                    ? 'border-gray-300 bg-gray-50'
-                                                    : 'border-gray-200 bg-white hover:bg-gray-50'
+                                                    ? 'border-white/10 bg-white/5'
+                                                    : 'border-white/5 bg-transparent hover:bg-white/5'
                                             }`}
                                         >
-                                            <div className={`text-sm font-bold mb-1 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                                            <div className={`text-sm font-bold mb-1 ${isToday ? 'text-primary-light' : 'text-white'}`}>
                                                 {day}
                                             </div>
                                             <div className="space-y-1 overflow-y-auto max-h-16">
@@ -392,7 +392,7 @@ export default function EventCalendar() {
                                                     </div>
                                                 ))}
                                                 {dayEvents.length > 3 && (
-                                                    <div className="text-xs text-gray-600 px-2">
+                                                    <div className="text-xs text-slate-400 px-2">
                                                         +{dayEvents.length - 3} more
                                                     </div>
                                                 )}
@@ -406,14 +406,14 @@ export default function EventCalendar() {
                 </div>
 
                 {/* Events Sidebar */}
-                <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 h-fit">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">Upcoming Events</h3>
+                <div className="glass-panel p-6 h-fit">
+                    <h3 className="text-xl font-bold text-white mb-4">Upcoming Events</h3>
 
                     {/* Category filter */}
                     <select
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 text-sm"
+                        className="input-field mb-4 text-sm"
                     >
                         <option value="">All Categories</option>
                         {categories.map(cat => (
@@ -423,23 +423,23 @@ export default function EventCalendar() {
 
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                         {filteredEvents.length === 0 ? (
-                            <p className="text-gray-600 text-sm">No events scheduled</p>
+                            <p className="text-slate-400 text-sm">No events scheduled</p>
                         ) : (
                             filteredEvents.slice(0, 10).map(event => (
                                 <div
                                     key={event._id}
                                     onClick={() => setSelectedEvent(event)}
-                                    className="p-3 border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition"
+                                    className="p-3 border border-white/10 rounded-lg hover:border-primary-light hover:bg-primary/20 cursor-pointer transition"
                                 >
                                     <div className="flex items-start gap-2">
                                         <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${getCategoryColor(event.category)}`}></div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-gray-900 truncate text-sm">{event.title}</p>
-                                            <p className="text-xs text-gray-600">
+                                            <p className="font-semibold text-white truncate text-sm">{event.title}</p>
+                                            <p className="text-xs text-slate-400">
                                                 {new Date(event.date).toLocaleDateString()}
                                             </p>
                                             {event.time && (
-                                                <p className="text-xs text-gray-500 flex items-center gap-1">
+                                                <p className="text-xs text-slate-500 flex items-center gap-1">
                                                     <Clock className="w-3 h-3" />
                                                     {event.time}
                                                 </p>
@@ -455,14 +455,14 @@ export default function EventCalendar() {
 
             {/* Event Detail Modal */}
             {selectedEvent && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
-                        <div className={`${getCategoryColor(selectedEvent.category)} p-6 text-white`}>
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="glass-panel max-w-lg w-full">
+                        <div className="bg-gradient-to-r from-primary to-primary-dark p-6 text-white rounded-t-2xl">
                             <div className="flex items-start justify-between">
                                 <h2 className="text-2xl font-bold">{selectedEvent.title}</h2>
                                 <button
                                     onClick={() => setSelectedEvent(null)}
-                                    className="hover:bg-white hover:bg-opacity-20 p-1 rounded transition"
+                                    className="hover:bg-white/20 p-1 rounded transition"
                                 >
                                     <X className="w-6 h-6" />
                                 </button>
@@ -470,18 +470,18 @@ export default function EventCalendar() {
                         </div>
 
                         <div className="p-6 space-y-4">
-                            <div className="text-sm text-gray-600">
-                                <span className="font-semibold text-gray-900">{selectedEvent.category.toUpperCase()}</span>
+                            <div className="text-sm text-slate-400">
+                                <span className="font-semibold text-slate-300">{selectedEvent.category.toUpperCase()}</span>
                             </div>
 
                             {selectedEvent.description && (
                                 <div>
-                                    <p className="text-gray-700">{selectedEvent.description}</p>
+                                    <p className="text-slate-200">{selectedEvent.description}</p>
                                 </div>
                             )}
 
-                            <div className="border-t pt-4 space-y-2">
-                                <div className="flex items-center gap-2 text-gray-600">
+                            <div className="border-t border-white/10 pt-4 space-y-2">
+                                <div className="flex items-center gap-2 text-slate-300">
                                     <Calendar className="w-4 h-4" />
                                     <span>{new Date(selectedEvent.date).toLocaleDateString()}</span>
                                     {selectedEvent.endDate && (
@@ -493,21 +493,21 @@ export default function EventCalendar() {
                                 </div>
 
                                 {selectedEvent.time && (
-                                    <div className="flex items-center gap-2 text-gray-600">
+                                    <div className="flex items-center gap-2 text-slate-300">
                                         <Clock className="w-4 h-4" />
                                         <span>{selectedEvent.time}</span>
                                     </div>
                                 )}
 
                                 {selectedEvent.location && (
-                                    <div className="flex items-center gap-2 text-gray-600">
+                                    <div className="flex items-center gap-2 text-slate-300">
                                         <MapPin className="w-4 h-4" />
                                         <span>{selectedEvent.location}</span>
                                     </div>
                                 )}
 
                                 {selectedEvent.capacity && (
-                                    <div className="flex items-center gap-2 text-gray-600">
+                                    <div className="flex items-center gap-2 text-slate-300">
                                         <Users className="w-4 h-4" />
                                         <span>{selectedEvent.registeredUsers?.length || 0} / {selectedEvent.capacity} registered</span>
                                     </div>
@@ -517,7 +517,7 @@ export default function EventCalendar() {
                             <div className="pt-4">
                                 <button
                                     onClick={() => setSelectedEvent(null)}
-                                    className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                                    className="btn-secondary w-full"
                                 >
                                     Close
                                 </button>

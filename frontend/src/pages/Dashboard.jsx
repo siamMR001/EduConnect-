@@ -49,9 +49,9 @@ const Dashboard = () => {
             const token = localStorage.getItem('token');
             const headers = { 'Authorization': `Bearer ${token}` };
             const [noticesRes, eventsRes, admissionsRes] = await Promise.all([
-                fetch(`${import.meta.env.VITE_API_URL}/api/notices`, { headers }),
-                fetch(`${import.meta.env.VITE_API_URL}/api/events`, { headers }),
-                fetch(`${import.meta.env.VITE_API_URL}/api/admissions`, { headers })
+                fetch(`${import.meta.env.VITE_API_URL}/notices`, { headers }),
+                fetch(`${import.meta.env.VITE_API_URL}/events`, { headers }),
+                fetch(`${import.meta.env.VITE_API_URL}/admissions`, { headers })
             ]);
             const noticesData = noticesRes.ok ? await noticesRes.json() : { notices: [] };
             const eventsData = eventsRes.ok ? await eventsRes.json() : [];
@@ -69,7 +69,7 @@ const Dashboard = () => {
 
     const handleSaveSettings = async () => {
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
+            await fetch(`${import.meta.env.VITE_API_URL}/settings`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ const Dashboard = () => {
 
     const handleUpdateAdmissionStatus = async (id, status) => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/${id}/status`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/admissions/${id}/status`, {
                 method: 'PATCH',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ const Dashboard = () => {
 
     const handleApproveAllPending = async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/approve-all-pending`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/admissions/approve-all-pending`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
@@ -140,7 +140,7 @@ const Dashboard = () => {
     const handleAddNotice = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notices`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/notices`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ const Dashboard = () => {
         }
 
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/notices/${id}`, { 
+            await fetch(`${import.meta.env.VITE_API_URL}/notices/${id}`, { 
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
@@ -200,7 +200,7 @@ const Dashboard = () => {
         }
 
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notices/${editingNotice._id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/notices/${editingNotice._id}`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -229,7 +229,7 @@ const Dashboard = () => {
     const handleAddEvent = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/events`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/events`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -266,7 +266,7 @@ const Dashboard = () => {
         }
 
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/events/${id}`, { 
+            await fetch(`${import.meta.env.VITE_API_URL}/events/${id}`, { 
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
@@ -288,7 +288,7 @@ const Dashboard = () => {
 
         try {
             // Format the date correctly for the API
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/events/${editingEvent._id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/events/${editingEvent._id}`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',

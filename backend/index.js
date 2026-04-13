@@ -26,12 +26,16 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/teachers', require('./routes/teacherRoutes'));
+app.use('/api/grades', require('./routes/gradeSectionRoutes'));
 app.use('/api/notices', require('./routes/noticeRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/admissions', require('./routes/admissionRoutes'));
 app.use('/api/students', require('./routes/studentRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/assignments', require('./routes/assignmentRoutes'));
+app.use('/api/submissions', require('./routes/submissionRoutes'));
 
 
 

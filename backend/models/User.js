@@ -11,6 +11,12 @@ const userSchema = new mongoose.Schema({
         required: true,
         default: 'student'
     },
+    // Link to EmployeeID (for teachers)
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'EmployeeID' },
+    
+    // Link to StudentProfile (for students)
+    studentProfile: { type: mongoose.Schema.Types.ObjectId, ref: 'StudentProfile' },
+    
     createdAt: { type: Date, default: Date.now }
 });
 

@@ -127,7 +127,7 @@ async function seedDatabase() {
                 academicHistory: [
                     { year: '2025', class: '07', grade: 'B+', remarks: 'Needs improvement in attendance' }
                 ],
-                status: 'inactive'
+                status: 'active'
             },
             {
                 studentId: 'SIC-2026-0004',
@@ -305,7 +305,7 @@ async function seedDatabase() {
                 academicHistory: [
                     { year: '2025', class: '06', grade: 'C+', remarks: 'Needs to focus more on studies' }
                 ],
-                status: 'inactive'
+                status: 'active'
             },
             {
                 studentId: 'SIC-2026-0012',

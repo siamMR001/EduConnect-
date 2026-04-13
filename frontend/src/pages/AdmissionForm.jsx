@@ -56,7 +56,7 @@ const AdmissionForm = () => {
     const [previewStudentId, setPreviewStudentId] = useState('');
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_API_URL}/api/settings`)
+        fetch(`${import.meta.env.VITE_API_URL}/settings`)
             .then(res => res.json())
             .then(data => {
                 if (data && data.admissionFee) {
@@ -93,7 +93,7 @@ const AdmissionForm = () => {
 
         try {
             // Fetch preview ID from backend
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/generate-id?classCode=${formData.applyingForClass}`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/admissions/generate-id?classCode=${formData.applyingForClass}`);
             const data = await res.json();
             if (res.ok && data.studentId) {
                 setPreviewStudentId(data.studentId);
@@ -156,7 +156,7 @@ const AdmissionForm = () => {
                 }
             });
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/admissions`, {
                 method: 'POST',
                 // Note: Do NOT set Content-Type manually when sending FormData, browser sets it with boundary
                 body: submissionData
