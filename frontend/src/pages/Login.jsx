@@ -26,7 +26,7 @@ const Login = () => {
             : { ...formData, role: activeTab };
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/${endpoint}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),

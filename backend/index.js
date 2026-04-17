@@ -48,7 +48,7 @@ const MONGO_URI = process.env.MONGODB_URI;
 mongoose.connect(MONGO_URI)
     .then(() => {
         console.log('MongoDB connection established successfully.');
-        app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     })
     .catch((err) => {
         console.error('MongoDB connection error:', err);

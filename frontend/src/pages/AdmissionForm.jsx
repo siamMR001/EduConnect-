@@ -156,7 +156,7 @@ const AdmissionForm = () => {
                 }
             });
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/admissions`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions`, {
                 method: 'POST',
                 // Note: Do NOT set Content-Type manually when sending FormData, browser sets it with boundary
                 body: submissionData
