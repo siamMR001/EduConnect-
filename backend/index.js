@@ -36,12 +36,11 @@ app.use('/api/students', require('./routes/studentRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/assignments', require('./routes/assignmentRoutes'));
 app.use('/api/submissions', require('./routes/submissionRoutes'));
+app.use('/api/classrooms', require('./routes/classroomRoutes'));
 
-
-
-
-
-// Database Connection
+// Start Cron Jobs
+const { markLateAssignments } = require('./cron/assignmentsCron');
+markLateAssignments.start();// Database Connection
 const PORT = process.env.PORT || 5001;
 const MONGO_URI = process.env.MONGODB_URI;
 

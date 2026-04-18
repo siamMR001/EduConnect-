@@ -15,7 +15,9 @@ import AdminTeacherDashboard from './pages/AdminTeacherDashboard';
 import TeacherRegister from './pages/TeacherRegister';
 import AdminGradeConfig from './pages/AdminGradeConfig';
 import AdminStudentAssignment from './pages/AdminStudentAssignment';
-
+import Classrooms from './pages/Classrooms';
+import ClassroomView from './pages/ClassroomView';
+import Gradesheet from './pages/Gradesheet';
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const [user, setUser] = useState(() => {
@@ -87,7 +89,7 @@ function App() {
 
                   {user?.role !== 'student' && (
                     <Link to="/directory" className="text-slate-300 hover:text-white font-medium transition-colors">
-                      Directory
+                      SIS
                     </Link>
                   )}
 
@@ -104,6 +106,12 @@ function App() {
                       </Link>
                     </>
                   )}
+                  <Link to="/classrooms" className="text-slate-300 hover:text-white font-medium transition-colors">
+                    Classrooms
+                  </Link>
+                  <Link to="/gradesheet" className="text-slate-300 hover:text-white font-medium transition-colors">
+                    Gradesheet
+                  </Link>
                 </div>
               </div>
               <div className="flex items-center gap-3 sm:gap-4">
@@ -147,6 +155,9 @@ function App() {
             <Route path="/profile/:id" element={isLoggedIn ? <StudentProfile /> : <Navigate to="/login" replace />} />
             <Route path="/directory" element={isLoggedIn && user?.role !== 'student' ? <StudentDirectory /> : <Navigate to="/dashboard" replace />} />
             <Route path="/teacher-register" element={<TeacherRegister />} />
+            <Route path="/classrooms" element={isLoggedIn ? <Classrooms /> : <Navigate to="/login" replace />} />
+            <Route path="/classrooms/:id" element={isLoggedIn ? <ClassroomView /> : <Navigate to="/login" replace />} />
+            <Route path="/gradesheet" element={isLoggedIn ? <Gradesheet /> : <Navigate to="/login" replace />} />
             <Route path="/admin/teachers" element={isLoggedIn && user?.role === 'admin' ? <AdminTeacherDashboard /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/grades" element={isLoggedIn && user?.role === 'admin' ? <AdminGradeConfig /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/students" element={isLoggedIn && user?.role === 'admin' ? <AdminStudentAssignment /> : <Navigate to="/dashboard" replace />} />

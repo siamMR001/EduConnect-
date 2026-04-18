@@ -45,17 +45,15 @@ export default function AdminStudentAssignment() {
     }
   }, [selectedGrade]);
 
-  // Mock function - in real app, this would fetch from student API
   const fetchStudentsForGrade = async (grade) => {
-    // Simulating fetching unassigned or reassignable students
-    const mockStudents = [
-      { _id: '1', firstName: 'Ahmed', lastName: 'Hassan', currentClass: grade, section: null, rollNumber: null },
-      { _id: '2', firstName: 'Fatima', lastName: 'Khan', currentClass: grade, section: 'A', rollNumber: 5 },
-      { _id: '3', firstName: 'Ali', lastName: 'Mohammed', currentClass: grade, section: null, rollNumber: null },
-      { _id: '4', firstName: 'Zainab', lastName: 'Ahmed', currentClass: grade, section: 'B', rollNumber: 12 },
-      { _id: '5', firstName: 'Omar', lastName: 'Salem', currentClass: grade, section: null, rollNumber: null },
-    ];
-    setStudents(mockStudents);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students?currentClass=${grade}`);
+      if (!response.ok) throw new Error('Failed to fetch students');
+      const data = await response.json();
+      setStudents(data);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   useEffect(() => {

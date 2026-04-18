@@ -21,6 +21,9 @@ const submissionSchema = new mongoose.Schema({
     submissionText: {
         type: String
     },
+    fileUrl: {
+        type: String
+    },
     submittedAt: {
         type: Date,
         default: Date.now
@@ -31,7 +34,7 @@ const submissionSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'submitted', 'graded', 'resubmitted'],
+        enum: ['pending', 'submitted', 'graded', 'resubmitted', 'late'],
         default: 'submitted'
     },
     marksObtained: {
