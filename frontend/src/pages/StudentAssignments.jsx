@@ -17,7 +17,8 @@ export default function StudentAssignments() {
     const [page, setPage] = useState(1);
     const navigate = useNavigate();
 
-    const API_URL = import.meta.env.VITE_API_URL;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const API_URL = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
 
     useEffect(() => {
         fetchAssignments();

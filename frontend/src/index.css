@@ -1,11 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
 @layer base {
   body {
-    @apply bg-background text-slate-200 font-sans antialiased overflow-x-hidden;
+    @apply bg-background text-slate-200 antialiased overflow-x-hidden;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.015em;
+  }
+  
+  h1, h2, h3, h4, .font-sis {
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.03em;
   }
 }
 
@@ -13,7 +18,20 @@
 
   /* Premium Glassmorphism Container */
   .glass-panel {
-    @apply bg-background-paper/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl;
+    @apply bg-background-paper/60 backdrop-blur-3xl border border-white/10 shadow-2xl rounded-2xl;
+  }
+
+  /* SIS Style Badges with Glow */
+  .badge-glow-emerald {
+    @apply bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)];
+  }
+  
+  .badge-glow-amber {
+    @apply bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_15px_-3px_rgba(245,158,11,0.3)];
+  }
+
+  .badge-glow-rose {
+    @apply bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_-3px_rgba(244,63,94,0.3)];
   }
 
   /* Primary Action Button */

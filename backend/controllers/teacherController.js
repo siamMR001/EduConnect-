@@ -13,11 +13,6 @@ const generateUniqueEmployeeId = async (employeeType) => {
     return `${prefix}-${year}-${String(nextNumber).padStart(4, '0')}`;
 };
 
-// Generate registration code for teacher
-const generateRegistrationCode = () => {
-    return crypto.randomBytes(16).toString('hex').substring(0, 12).toUpperCase();
-};
-
 // Add new teacher to database (Admin only)
 exports.addTeacher = async (req, res) => {
     try {
@@ -25,19 +20,8 @@ exports.addTeacher = async (req, res) => {
         const { firstName, lastName, email, phone, gender, dateOfBirth, department, subject, employeeType } = req.body;
 
         // Validate input
-        if (!firstName || !lastName || !email) {
-            return res.status(400).json({ message: 'First name, last name, and email are required' });
-        }
-
-        // Check if email already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: 'Email already registered' });
-        }
-
-        const existingEmployee = await EmployeeID.findOne({ email });
-        if (existingEmployee) {
-            return res.status(400).json({ message: 'This email is already registered as an employee' });
+        if (!firstName || !lastName) {
+            return res.status(400).json({ message: 'First name and last name are required' });
         }
 
         // Generate unique employee ID
@@ -50,16 +34,13 @@ exports.addTeacher = async (req, res) => {
             employeeType: type,
             firstName,
             lastName,
-            email,
             phone,
             gender,
             dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
             department,
             subject,
-            status: 'pending',
-            generatedBy: adminId,
-            registrationCode: generateRegistrationCode(),
-            codeExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days expiry
+            status: 'active',
+            generatedBy: adminId
         });
 
         res.status(201).json({
@@ -67,11 +48,8 @@ exports.addTeacher = async (req, res) => {
             employee: {
                 employeeId: employee.employeeId,
                 name: `${employee.firstName} ${employee.lastName}`,
-                email: employee.email,
                 employeeType: employee.employeeType,
-                status: employee.status,
-                registrationCode: employee.registrationCode,
-                codeExpiry: employee.codeExpiry
+                status: employee.status
             }
         });
     } catch (error) {
@@ -127,20 +105,23 @@ exports.getEmployeeByEmployeeId = async (req, res) => {
     try {
         const { employeeId } = req.params;
         
-        const employee = await EmployeeID.findOne({ employeeId });
+        const employee = await EmployeeID.findOne({ 
+            employeeId: employeeId.trim() 
+        }).collation({ locale: 'en', strength: 2 });
 
         if (!employee) {
             return res.status(404).json({ message: 'Employee ID not found' });
         }
 
-        if (employee.status !== 'pending') {
-            return res.status(400).json({ message: 'This employee has already registered or is inactive' });
+        if (employee.status === 'inactive') {
+            return res.status(400).json({ message: 'This employee account is inactive. Please contact admin.' });
         }
 
-        // Check if registration code has expired
-        if (new Date() > employee.codeExpiry) {
-            return res.status(400).json({ message: 'Registration link has expired. Contact admin to regenerate.' });
+        if (employee.user) {
+            return res.status(400).json({ message: 'This employee has already registered and linked an account.' });
         }
+
+
 
         res.status(200).json({
             employeeId: employee.employeeId,
@@ -155,32 +136,59 @@ exports.getEmployeeByEmployeeId = async (req, res) => {
     }
 };
 
-// Verify registration code (for teacher registration)
-exports.verifyRegistrationCode = async (req, res) => {
-    try {
-        const { employeeId, registrationCode } = req.body;
 
-        const employee = await EmployeeID.findOne({
-            employeeId,
-            registrationCode,
-            status: 'pending'
+// Update employee record details (Admin only)
+exports.updateEmployee = async (req, res) => {
+    try {
+        console.log('Updating Employee ID:', req.params.id);
+        console.log('Update Data Received:', req.body);
+        
+        const updateData = { ...req.body };
+        
+        // Clean data: Convert empty strings to null for certain fields to avoid validation errors
+        ['dateOfBirth', 'email', 'phone'].forEach(field => {
+            if (updateData[field] === '') {
+                updateData[field] = null;
+            }
         });
 
-        if (!employee) {
-            return res.status(400).json({ message: 'Invalid employee ID or registration code' });
+        // Handle file uploads if present
+        if (req.files) {
+            console.log('Files detected in request:', Object.keys(req.files));
+            if (req.files['profilePicture']) {
+                const pic = req.files['profilePicture'][0];
+                console.log('New Profile Picture:', pic.filename);
+                updateData.profilePicture = `/uploads/teacher_docs/${pic.filename}`;
+            }
+            if (req.files['professionalDocs']) {
+                const doc = req.files['professionalDocs'][0];
+                console.log('New Professional Doc:', doc.filename);
+                // Map consolidated PDF to cvDocument and nidDocument for consistency
+                const filePath = `/uploads/teacher_docs/${doc.filename}`;
+                updateData.cvDocument = filePath;
+                updateData.nidDocument = filePath; // Consolidated PDF
+            }
+        } else {
+            console.log('No files found in req.files');
         }
 
-        if (new Date() > employee.codeExpiry) {
-            return res.status(400).json({ message: 'Registration code has expired' });
+        const employee = await EmployeeID.findByIdAndUpdate(
+            req.params.id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
         }
 
         res.status(200).json({
-            message: 'Registration code verified',
-            verified: true
+            message: 'Employee record updated successfully',
+            employee
         });
     } catch (error) {
-        console.error('Error verifying code:', error);
-        res.status(500).json({ message: 'Error verifying code', error: error.message });
+        console.error('Error updating employee:', error);
+        res.status(500).json({ message: 'Error updating employee', error: error.message });
     }
 };
 
@@ -214,27 +222,18 @@ exports.updateEmployeeStatus = async (req, res) => {
     }
 };
 
-// Regenerate registration code (Admin only)
-exports.regenerateRegistrationCode = async (req, res) => {
+
+// Get teacher profile (for logged in teacher)
+exports.getTeacherProfile = async (req, res) => {
     try {
-        const employee = await EmployeeID.findById(req.params.id);
-
+        const employee = await EmployeeID.findOne({ user: req.user._id });
         if (!employee) {
-            return res.status(404).json({ message: 'Employee not found' });
+            return res.status(404).json({ message: 'Teacher profile not found' });
         }
-
-        employee.registrationCode = generateRegistrationCode();
-        employee.codeExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        await employee.save();
-
-        res.status(200).json({
-            message: 'Registration code regenerated',
-            registrationCode: employee.registrationCode,
-            codeExpiry: employee.codeExpiry
-        });
+        res.status(200).json(employee);
     } catch (error) {
-        console.error('Error regenerating code:', error);
-        res.status(500).json({ message: 'Error regenerating code', error: error.message });
+        console.error('Error fetching teacher profile:', error);
+        res.status(500).json({ message: 'Error fetching teacher profile', error: error.message });
     }
 };
 

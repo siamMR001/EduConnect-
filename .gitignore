@@ -141,3 +141,10 @@ vite.config.ts.timestamp-*
 # macOS files
 .DS_Store
 node_modules 2/
+
+# Project specific
+backend/uploads/
+backend/scratch/
+backend/scripts/
+test-student.js
+test_add_teacher.js

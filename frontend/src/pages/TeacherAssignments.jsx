@@ -31,7 +31,8 @@ export default function TeacherAssignments() {
         feedback: ''
     });
 
-    const API_URL = import.meta.env.VITE_API_URL;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const API_URL = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
 
     useEffect(() => {
         fetchAssignments();
@@ -42,7 +43,7 @@ export default function TeacherAssignments() {
             setLoading(true);
             const token = localStorage.getItem('token');
             const response = await axios.get(
-                `${API_URL}/assignments?page=${page}&limit=10`,
+                `${API_URL}/assignments/teacher/all?page=${page}&limit=10`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setAssignments(response.data.assignments);

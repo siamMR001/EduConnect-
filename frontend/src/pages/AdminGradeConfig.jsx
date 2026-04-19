@@ -6,7 +6,7 @@ export default function AdminGradeConfig() {
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [academicYear] = useState('2025-2026');
+  const [academicYear] = useState(new Date().getFullYear().toString());
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCapacity, setEditingCapacity] = useState({});
 
@@ -15,14 +15,15 @@ export default function AdminGradeConfig() {
     maxSections: 3,
   });
 
-  const GRADES = ['6', '7', '8', '9', '10'];
+
   const SECTIONS = ['A', 'B', 'C', 'D', 'E'];
 
   const fetchGrades = async () => {
     try {
       setLoading(true);
       const data = await gradeService.getAllGrades(academicYear);
-      setGrades(data.grades || []);
+      const sorted = (data.grades || []).sort((a, b) => (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0));
+      setGrades(sorted);
       setError('');
     } catch (err) {
       setError(err.message);
@@ -108,16 +109,14 @@ export default function AdminGradeConfig() {
           <form onSubmit={handleCreateGrade} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-slate-400 text-sm">Grade</label>
-              <select
+              <input
+                type="text"
                 value={formData.grade}
                 onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
-                className="mt-1 w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white"
-              >
-                {GRADES.map(g => (
-                  <option key={g} value={g}>Class {g}</option>
-                ))}
-              </select>
-            </div>
+                placeholder="e.g. 11, Play, Nursery"
+                className="mt-1 w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500"
+                required
+              />
             <div>
               <label className="text-slate-400 text-sm">Number of Sections</label>
               <select

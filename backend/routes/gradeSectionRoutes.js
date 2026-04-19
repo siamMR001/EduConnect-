@@ -6,7 +6,9 @@ const gradeSectionController = require('../controllers/gradeSectionController');
 // Admin routes - manage grades and sections
 router.post('/create-grade', protect, authorize('admin'), gradeSectionController.createGradeConfiguration);
 router.get('/all-grades', gradeSectionController.getAllGradeConfigurations);
+router.get('/summary', gradeSectionController.getGradeSummary);
 router.get('/grade-config', gradeSectionController.getGradeConfiguration);
+router.patch('/:id', protect, authorize('admin'), gradeSectionController.updateGradeConfiguration);
 router.patch('/update-section-capacity', protect, authorize('admin'), gradeSectionController.updateSectionCapacity);
 
 // Student assignment routes

@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
 
 const teacherService = {
   // Get all employees with optional filters
@@ -47,7 +48,6 @@ const teacherService = {
     return response.json();
   },
 
-  // Add new teacher (admin only)
   addTeacher: async (teacherData) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_URL}/teachers/add-teacher`, {
@@ -134,18 +134,50 @@ const teacherService = {
   },
 
   // Register teacher (public - self-service)
-  registerTeacher: async (registrationData) => {
+  registerTeacher: async (formData) => {
     const response = await fetch(`${API_URL}/auth/register-teacher`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(registrationData),
+      body: formData, // Sending FormData directly for multipart/form-data
     });
+    const data = await response.json();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Registration failed');
+      throw new Error(data.message || 'Registration failed');
     }
+    return data;
+  },
+
+  // Update employee full record (Admin only)
+  updateEmployee: async (id, employeeData) => {
+    const token = localStorage.getItem('token');
+    
+    // Determine if we should send as FormData (for file uploads) or JSON
+    const isFormData = employeeData instanceof FormData;
+    
+    const response = await fetch(`${API_URL}/teachers/employee/${id}`, {
+      method: 'PUT',
+      headers: {
+        // Content-Type is set automatically by the browser when sending FormData
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        'Authorization': `Bearer ${token}`,
+      },
+      body: isFormData ? employeeData : JSON.stringify(employeeData),
+    });
+    
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Failed to update employee');
+    return data;
+  },
+
+  // Get current teacher's profile
+  getProfile: async () => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/teachers/profile`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch profile');
     return response.json();
   },
 };

@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
 
 const gradeService = {
   // Create grade configuration (admin only)
@@ -26,7 +27,7 @@ const gradeService = {
   },
 
   // Get grade configuration (public)
-  getGradeConfig: async (grade, academicYear = '2025-2026') => {
+  getGradeConfig: async (grade, academicYear = new Date().getFullYear().toString()) => {
     const response = await fetch(
       `${API_URL}/grades/grade-config?grade=${grade}&academicYear=${academicYear}`
     );
@@ -35,7 +36,7 @@ const gradeService = {
   },
 
   // Assign student to section (admin only) - auto-assign
-  assignStudentToSection: async (studentId, grade, academicYear = '2025-2026') => {
+  assignStudentToSection: async (studentId, grade, academicYear = new Date().getFullYear().toString()) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_URL}/grades/assign-student/${studentId}`, {
       method: 'POST',
@@ -50,7 +51,7 @@ const gradeService = {
   },
 
   // Change student section (admin only)
-  changeStudentSection: async (studentId, newSection, grade, academicYear = '2025-2026') => {
+  changeStudentSection: async (studentId, newSection, grade, academicYear = new Date().getFullYear().toString()) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_URL}/grades/change-student-section`, {
       method: 'PATCH',
@@ -65,7 +66,8 @@ const gradeService = {
   },
 
   // Get section statistics (public)
-  getSectionStatistics: async (grade, academicYear = '2025-2026') => {
+  getSectionStatistics: async (grade, academicYear = new Date().getFullYear().toString()) => {
+
     const response = await fetch(
       `${API_URL}/grades/section-statistics?grade=${grade}&academicYear=${academicYear}`
     );
@@ -74,7 +76,7 @@ const gradeService = {
   },
 
   // Update section capacity (admin only)
-  updateSectionCapacity: async (grade, sectionName, maxStudents, academicYear = '2025-2026') => {
+  updateSectionCapacity: async (grade, sectionName, maxStudents, academicYear = new Date().getFullYear().toString()) => {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_URL}/grades/update-section-capacity`, {
       method: 'PATCH',

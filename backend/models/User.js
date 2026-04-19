@@ -14,10 +14,20 @@ const userSchema = new mongoose.Schema({
     // Link to EmployeeID (for teachers)
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'EmployeeID' },
     
-    // Link to StudentProfile (for students)
     studentProfile: { type: mongoose.Schema.Types.ObjectId, ref: 'StudentProfile' },
     
     createdAt: { type: Date, default: Date.now }
+}, {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Virtual population for student profile
+userSchema.virtual('profile', {
+    ref: 'StudentProfile',
+    localField: '_id',
+    foreignField: 'user',
+    justOne: true
 });
 
 // Password Hash middleware

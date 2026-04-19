@@ -25,12 +25,15 @@ router.get('/', async (req, res) => {
 // PUT /api/settings - Update settings (Admin only ideally)
 router.put('/', async (req, res) => {
     try {
-        const { admissionFee } = req.body;
+        const { admissionFee, attendanceEmailTemplate } = req.body;
 
         let settings = await getOrCreateSettings();
 
         if (admissionFee !== undefined) {
             settings.admissionFee = admissionFee;
+        }
+        if (attendanceEmailTemplate !== undefined) {
+            settings.attendanceEmailTemplate = attendanceEmailTemplate;
         }
 
         await settings.save();

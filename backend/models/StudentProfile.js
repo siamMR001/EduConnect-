@@ -15,7 +15,7 @@ const studentProfileSchema = new mongoose.Schema({
     currentClass: { type: String, required: true },
     section: { type: String, default: 'A' },
     rollNumber: { type: Number },
-    academicYear: { type: String }, // e.g., "2025-2026"
+    academicYear: { type: String }, // e.g., "2025"
     previousSchool: { type: String },
     previousResultSheet: { type: String },
     
@@ -64,7 +64,7 @@ const studentProfileSchema = new mongoose.Schema({
         grade: String,
         remarks: String
     }],
-    status: { type: String, enum: ['active', 'graduated', 'transferred'], default: 'active' },
+    status: { type: String, enum: ['active', 'inactive', 'dropped', 'graduated', 'transferred'], default: 'active' },
     createdAt: { type: Date, default: Date.now }
 });
 

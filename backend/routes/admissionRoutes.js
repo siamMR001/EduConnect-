@@ -36,15 +36,17 @@ router.get('/generate-id', async (req, res) => {
         const classCode = classStr.padStart(2, '0');
 
         const prefixRegex = new RegExp(`^${year}${classCode}`);
-        const lastAdmission = await Admission.findOne({
-            studentId: prefixRegex
-        }).sort({ studentId: -1 });
-
-        let sequence = 1;
-        if (lastAdmission && lastAdmission.studentId) {
-            const lastSeqStr = lastAdmission.studentId.slice(4);
-            sequence = parseInt(lastSeqStr, 10) + 1;
-        }
+        
+        // Find maximum IDs in both collections
+        const [lastInAdmissions, lastInProfiles] = await Promise.all([
+            Admission.findOne({ studentId: prefixRegex }).sort({ studentId: -1 }),
+            StudentProfile.findOne({ studentId: prefixRegex }).sort({ studentId: -1 })
+        ]);
+        
+        const seqFromAdmissions = lastInAdmissions?.studentId ? parseInt(lastInAdmissions.studentId.slice(4), 10) : 0;
+        const seqFromProfiles = lastInProfiles?.studentId ? parseInt(lastInProfiles.studentId.slice(4), 10) : 0;
+        
+        const sequence = Math.max(seqFromAdmissions, seqFromProfiles) + 1;
 
         const seqCode = sequence.toString().padStart(4, '0');
         const nextId = `${year}${classCode}${seqCode}`;

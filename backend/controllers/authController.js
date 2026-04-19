@@ -3,6 +3,7 @@ const StudentProfile = require('../models/StudentProfile');
 const EmployeeID = require('../models/EmployeeID');
 const Admission = require('../models/Admission');
 const jwt = require('jsonwebtoken');
+const gradeSectionController = require('./gradeSectionController');
 
 const generateToken = (id, role) => {
     return jwt.sign({ id, role }, process.env.JWT_SECRET, {
@@ -39,6 +40,8 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: 'User (email) already exists' });
         }
 
+
+
         const user = await User.create({
             name: name || (existingProfile ? `${existingProfile.firstName} ${existingProfile.lastName}`.trim() : 'Student'),
             email,
@@ -52,7 +55,25 @@ exports.registerUser = async (req, res) => {
                 try {
                     existingProfile.user = user._id;
                     await existingProfile.save();
-                    console.log('StudentProfile successfully claimed by new user:', existingProfile._id);
+                    
+                    // Also link studentProfile back to user for direct population support
+                    user.studentProfile = existingProfile._id;
+                    await user.save();
+                    
+                    console.log('Dual link established between User and StudentProfile:', existingProfile._id);
+                    
+                    // --- Automatic Section Assignment ---
+                    try {
+                        await gradeSectionController.performStudentAssignment(
+                            existingProfile._id, 
+                            existingProfile.currentClass, 
+                            existingProfile.academicYear || new Date().getFullYear().toString()
+                        );
+                        console.log(`Student ${studentId} automatically assigned to section.`);
+                    } catch (assignError) {
+                        // We don't fail registration if assignment fails (e.g. no sections deployed yet)
+                        console.warn('Auto-assignment during registration failed:', assignError.message);
+                    }
 
                     return res.status(201).json({
                         _id: user._id,
@@ -86,17 +107,29 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
+        
+        let searchKey = email.trim();
 
         let user;
-        if (!email.includes('@')) {
-            const studentProfile = await StudentProfile.findOne({ studentId: email });
+        if (!searchKey.includes('@')) {
+            const studentProfile = await StudentProfile.findOne({ studentId: { $regex: new RegExp(`^${searchKey}$`, 'i') } });
+            const employeeProfile = await EmployeeID.findOne({ employeeId: { $regex: new RegExp(`^${searchKey}$`, 'i') } });
+            
             if (studentProfile) {
+                if (!studentProfile.user) {
+                    return res.status(401).json({ message: 'Student ID found but not registered yet. Please go to Register tab.' });
+                }
                 user = await User.findById(studentProfile.user);
+            } else if (employeeProfile) {
+                if (!employeeProfile.user) {
+                    return res.status(401).json({ message: 'Teacher ID found but not registered yet. Please go to Register tab.' });
+                }
+                user = await User.findById(employeeProfile.user);
             } else {
-                user = await User.findOne({ email });
+                user = await User.findOne({ email: searchKey.toLowerCase() });
             }
         } else {
-            user = await User.findOne({ email });
+            user = await User.findOne({ email: searchKey.toLowerCase() });
         }
 
         if (user && (await user.matchPassword(password))) {
@@ -115,59 +148,95 @@ exports.loginUser = async (req, res) => {
     }
 };
 
-// Teacher registration using Employee ID and Registration Code
+// Teacher registration using Employee ID and Email with Document Uploads
 exports.registerTeacher = async (req, res) => {
     try {
-        const { employeeId, registrationCode, password, confirmPassword } = req.body;
+        const { 
+            employeeId, email, password, confirmPassword,
+            phone, address, fatherName, motherName, religion, maritalStatus, gender, dateOfBirth, city, state
+        } = req.body;
 
-        // Validate input
-        if (!employeeId || !registrationCode || !password || !confirmPassword) {
-            return res.status(400).json({ message: 'All fields are required' });
+        // Validate basic input
+        if (!employeeId || !email || !password || !confirmPassword) {
+            return res.status(400).json({ message: 'All text fields are required (employeeId, email, password, confirmPassword)' });
         }
 
         if (password !== confirmPassword) {
             return res.status(400).json({ message: 'Passwords do not match' });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ message: 'Password must be at least 6 characters' });
-        }
 
-        // Find employee record
+
+        // Find employee record by ID only (case-insensitive)
         const employee = await EmployeeID.findOne({
-            employeeId,
-            registrationCode,
-            status: 'pending'
+            employeeId: { $regex: new RegExp(`^${employeeId.trim()}$`, 'i') }
         });
 
         if (!employee) {
-            return res.status(400).json({ message: 'Invalid employee ID or registration code' });
+            return res.status(400).json({ message: 'Invalid employee ID' });
         }
 
-        // Check if registration code has expired
-        if (new Date() > employee.codeExpiry) {
-            return res.status(400).json({ message: 'Registration link has expired. Please contact admin to regenerate.' });
+        if (employee.status === 'inactive') {
+            return res.status(400).json({ message: 'This employee account is inactive. Please contact admin.' });
         }
 
-        // Check if email already has a user
-        const existingUser = await User.findOne({ email: employee.email });
+        if (employee.user) {
+            return res.status(400).json({ message: 'Teacher already registered' });
+        }
+
+        // Check if email already has a user or employee record
+        const targetEmail = email.trim().toLowerCase();
+        const existingUser = await User.findOne({ email: targetEmail });
         if (existingUser) {
             return res.status(400).json({ message: 'An account already exists with this email' });
+        }
+        
+        const existingEmployeeWithEmail = await EmployeeID.findOne({ email: targetEmail });
+        if (existingEmployeeWithEmail && existingEmployeeWithEmail._id.toString() !== employee._id.toString()) {
+            return res.status(400).json({ message: 'An employee record already exists with this email' });
         }
 
         // Create user account
         const user = await User.create({
             name: `${employee.firstName} ${employee.lastName}`,
-            email: employee.email,
+            email: targetEmail,
             password,
             role: employee.employeeType === 'teacher' ? 'teacher' : 'admin',
             employeeId: employee._id
         });
 
-        // Update employee record
+        // Update personal/professional info
+        if (phone) employee.phone = phone;
+        if (address) employee.address = address;
+        if (fatherName) employee.fatherName = fatherName;
+        if (motherName) employee.motherName = motherName;
+        if (religion) employee.religion = religion;
+        if (maritalStatus) employee.maritalStatus = maritalStatus;
+        if (gender) employee.gender = gender;
+        if (dateOfBirth) employee.dateOfBirth = new Date(dateOfBirth);
+        if (city) employee.city = city;
+        if (state) employee.state = state;
+
+        // Store uploaded professional documents
+        if (req.files) {
+            if (req.files['profilePicture']) {
+                employee.profilePicture = `/uploads/teacher_docs/${req.files['profilePicture'][0].filename}`;
+            }
+            if (req.files['professionalDocs']) {
+                // Map the consolidated PDF to cvDocument field (or we could use a new field, but cvDocument is existing)
+                employee.cvDocument = `/uploads/teacher_docs/${req.files['professionalDocs'][0].filename}`;
+                // Also mark NID and Degrees as referencing this same combined file if needed, 
+                // but usually the specific field is fine
+                employee.nidDocument = `/uploads/teacher_docs/${req.files['professionalDocs'][0].filename}`;
+            }
+        }
+
+        // Update employee record with the new email
+        employee.email = targetEmail;
         employee.user = user._id;
         employee.status = 'active';
         employee.registeredAt = new Date();
+        // Clear deprecated fields just in case
         employee.registrationCode = null;
         employee.codeExpiry = null;
         await employee.save();

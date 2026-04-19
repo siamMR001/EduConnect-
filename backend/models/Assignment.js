@@ -20,11 +20,25 @@ const assignmentSchema = new mongoose.Schema({
     },
     class: {
         type: String,
-        required: true
+        // required: true // make it optional so it won't break new creation
+    },
+    classroomId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Classroom'
+    },
+    teacherId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     },
     deadline: {
         type: Date,
-        required: true
+        // required: true
+    },
+    dueDate: {
+        type: Date
+    },
+    attachmentUrl: {
+        type: String
     },
     attachments: [
         {
