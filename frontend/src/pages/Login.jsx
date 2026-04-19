@@ -17,13 +17,28 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Prevent standard registration for Teachers and enforce the wizard routing
+        if (!isLoginMode && activeTab === 'teacher') {
+            navigate('/teacher-registration', { 
+                state: { 
+                    prefillEmployeeId: formData.name, 
+                    prefillEmail: formData.email, 
+                    prefillPassword: formData.password 
+                } 
+            });
+            return;
+        }
+
+
+
         setIsLoading(true);
         setError(null);
 
         const endpoint = isLoginMode ? 'login' : 'register';
         const payload = isLoginMode
             ? { email: formData.email, password: formData.password, role: activeTab }
-            : { ...formData, role: activeTab };
+            : { ...formData, role: activeTab, employeeId: formData.name }; // Using name state for Employee ID for teachers
 
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/${endpoint}`, {
@@ -109,9 +124,12 @@ const Login = () => {
                                     type="text"
                                     required={!isLoginMode && activeTab !== 'student'}
                                     value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    onChange={(e) => {
+                                        const val = activeTab === 'teacher' ? e.target.value.toUpperCase() : e.target.value;
+                                        setFormData({ ...formData, name: val });
+                                    }}
                                     className="input-field pl-10"
-                                    placeholder="Full Name"
+                                    placeholder={activeTab === 'teacher' ? 'Employee ID (e.g. TCH-2026-0001)' : 'Full Name'}
                                 />
                             </div>
                         )}
@@ -123,7 +141,7 @@ const Login = () => {
                                     type="text"
                                     required={!isLoginMode && activeTab === 'student'}
                                     value={formData.studentId}
-                                    onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                                    onChange={(e) => setFormData({ ...formData, studentId: e.target.value.toUpperCase() })}
                                     className="input-field pl-10"
                                     placeholder="Approved Student ID (e.g. 26090001)"
                                 />
@@ -136,9 +154,12 @@ const Login = () => {
                                 type={isLoginMode ? "text" : "email"}
                                 required
                                 value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                onChange={(e) => {
+                                    const val = (isLoginMode && activeTab === 'teacher') ? e.target.value.toUpperCase() : e.target.value;
+                                    setFormData({ ...formData, email: val });
+                                }}
                                 className="input-field pl-10"
-                                placeholder={isLoginMode ? "Email address or Student ID" : "Email address"}
+                                placeholder={isLoginMode ? (activeTab === 'teacher' ? 'Email or Employee ID' : 'Email or Student ID') : "Email address"}
                             />
                         </div>
 
@@ -183,6 +204,19 @@ const Login = () => {
                             <button
                                 type="button"
                                 onClick={() => {
+                                    if (isLoginMode) {
+                                        // Switching to Register: Sync ID
+                                        setFormData(prev => ({ 
+                                            ...prev, 
+                                            name: prev.email.includes('@') ? '' : prev.email 
+                                        }));
+                                    } else {
+                                        // Switching to Login: Sync ID
+                                        setFormData(prev => ({ 
+                                            ...prev, 
+                                            email: (prev.name && activeTab === 'teacher') ? prev.name : prev.email 
+                                        }));
+                                    }
                                     setIsLoginMode(!isLoginMode);
                                     setError(null);
                                 }}

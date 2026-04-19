@@ -24,7 +24,7 @@ const gradeSectionSchema = new mongoose.Schema({
     currentEnrollment: { type: Number, default: 0 },
     
     // Academic year this configuration applies to
-    academicYear: { type: String, required: true }, // e.g., "2025-2026"
+    academicYear: { type: String, required: true }, // e.g., "2025"
     
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }

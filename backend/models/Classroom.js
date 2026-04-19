@@ -10,19 +10,39 @@ const classroomSchema = new mongoose.Schema({
         required: true
     },
     section: {
-        type: String, // Sunrise, Horizon, Nova, Ember
+        type: String, // Manual entry: Sunrise, Horizon, Jupiter, etc.
         required: true
     },
     capacity: {
         type: Number,
-        default: 30,
-        max: 30
+        default: 30
     },
     teacherId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
+    leadSubject: {
+        type: String,
+        required: true
+    },
+    leadSchedule: [{
+        day: { type: String, enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
+        startTime: String,
+        endTime: String
+    }],
+    courses: [{
+        courseName: String,
+        teacherId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        schedule: [{
+            day: { type: String, enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
+            startTime: String,
+            endTime: String
+        }]
+    }],
     studentIds: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -30,6 +50,10 @@ const classroomSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    academicYear: {
+        type: String,
+        required: true
     },
     createdAt: {
         type: Date,

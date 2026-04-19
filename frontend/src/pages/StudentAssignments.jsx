@@ -17,7 +17,8 @@ export default function StudentAssignments() {
     const [page, setPage] = useState(1);
     const navigate = useNavigate();
 
-    const API_URL = import.meta.env.VITE_API_URL;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const API_URL = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
 
     useEffect(() => {
         fetchAssignments();
@@ -32,7 +33,7 @@ export default function StudentAssignments() {
             setLoading(true);
             const token = localStorage.getItem('token');
             const response = await axios.get(
-                `${API_URL}/api/assignments?page=${page}&limit=10`,
+                `${API_URL}/assignments?page=${page}&limit=10`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setAssignments(response.data.assignments);
@@ -87,7 +88,7 @@ export default function StudentAssignments() {
             formData.append('submissionText', submissionText);
 
             await axios.post(
-                `${API_URL}/api/submissions/${selectedAssignment._id}/submit`,
+                `${API_URL}/submissions/${selectedAssignment._id}/submit`,
                 formData,
                 {
                     headers: {
@@ -114,7 +115,7 @@ export default function StudentAssignments() {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.get(
-                `${API_URL}/api/assignments/${assignmentId}/download/${attachmentIndex}`,
+                `${API_URL}/assignments/${assignmentId}/download/${attachmentIndex}`,
                 {
                     headers: { Authorization: `Bearer ${token}` },
                     responseType: 'blob'

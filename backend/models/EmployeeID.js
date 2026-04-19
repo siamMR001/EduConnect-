@@ -7,31 +7,42 @@ const employeeIDSchema = new mongoose.Schema({
     // Type of employee (teacher, admin, staff, etc.)
     employeeType: {
         type: String,
-        enum: ['teacher', 'admin', 'staff', 'principal', 'vice_principal'],
+        enum: ['teacher', 'admin', 'staff', 'principal', 'vice_principal', 'employee'],
         required: true
     },
     
     // Personal information
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, unique: true, sparse: true },
     phone: { type: String },
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
     dateOfBirth: { type: Date },
+    religion: { type: String },
+    maritalStatus: { type: String },
+    fatherName: { type: String },
+    motherName: { type: String },
     
     // Status of registration
     status: {
         type: String,
         enum: ['pending', 'active', 'inactive'],
-        default: 'pending'
+        default: 'active'
     },
     
     // Link to user account (when they register)
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     
-    // Verification code (used for one-time registration)
-    registrationCode: { type: String },
-    codeExpiry: { type: Date },
+    // Verification code (used for one-time registration) - DEPRECATED
+    // registrationCode: { type: String },
+    // codeExpiry: { type: Date },
+    
+    // Professional Documents
+    profilePicture: { type: String },
+    nidDocument: { type: String },
+    bachelorsDegree: { type: String },
+    mastersDegree: { type: String },
+    cvDocument: { type: String },
     
     // Department/Subject (for teachers)
     department: { type: String },

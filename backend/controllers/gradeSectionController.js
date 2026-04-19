@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const GradeSection = require('../models/GradeSection');
 const StudentProfile = require('../models/StudentProfile');
 
@@ -14,16 +15,7 @@ exports.createGradeConfiguration = async (req, res) => {
         let gradeConfig = await GradeSection.findOne({ grade, academicYear });
 
         if (gradeConfig) {
-            // Update existing
-            gradeConfig.maxSections = maxSections;
-            gradeConfig.sections = sections || [];
-            gradeConfig.updatedAt = new Date();
-            await gradeConfig.save();
-
-            return res.status(200).json({
-                message: 'Grade configuration updated successfully',
-                gradeConfig
-            });
+            return res.status(400).json({ message: 'Configuration for this grade already exists for the selected academic year. You cannot create duplicates.' });
         }
 
         // Create sections array if not provided
@@ -135,6 +127,72 @@ exports.updateSectionCapacity = async (req, res) => {
     }
 };
 
+// Helper to assign a student to the next available section
+exports.performStudentAssignment = async (studentId, grade, academicYear) => {
+    const Classroom = mongoose.model('Classroom');
+    const StudentProfile = mongoose.model('StudentProfile');
+    
+    // Find all classrooms for this grade and year
+    // Handle both '7' and 7
+    const classNumberStr = isNaN(parseInt(grade)) ? grade : parseInt(grade).toString();
+    const classrooms = await Classroom.find({ 
+        classNumber: classNumberStr, 
+        academicYear 
+    });
+
+    if (!classrooms || classrooms.length === 0) {
+        throw new Error('No sections deployed for this grade');
+    }
+
+    // Find the first available section (not at capacity)
+    const availableSection = classrooms.find(c => c.studentIds.length < (c.capacity || 30));
+
+    if (!availableSection) {
+        throw new Error('No available seats in any section for this grade');
+    }
+
+    // 1. Update student profile
+    const student = await StudentProfile.findById(studentId);
+    if (!student) {
+        throw new Error('Student profile not found');
+    }
+
+    // Clean up current studentIds to ensure roll is correct
+    availableSection.studentIds = availableSection.studentIds.filter(id => id != null);
+    
+    // If student already in this section, just return
+    const userRef = student.user || studentId;
+    if (availableSection.studentIds.map(id => id.toString()).includes(userRef.toString())) {
+        return {
+            studentId: student.studentId,
+            name: `${student.firstName} ${student.lastName}`,
+            section: student.section,
+            rollNumber: student.rollNumber,
+            grade: student.currentClass
+        };
+    }
+
+    const rollNumber = (availableSection.studentIds.length + 1).toString();
+
+    student.section = availableSection.section;
+    student.rollNumber = rollNumber;
+    student.academicYear = academicYear;
+    student.currentClass = classNumberStr;
+    await student.save();
+
+    // 2. Add student to Classroom member list
+    availableSection.studentIds.push(userRef);
+    await availableSection.save();
+
+    return {
+        studentId: student.studentId,
+        name: `${student.firstName} ${student.lastName}`,
+        section: student.section,
+        rollNumber: student.rollNumber,
+        grade: student.currentClass
+    };
+};
+
 // Assign student to next available section (used during student enrollment)
 exports.assignStudentToSection = async (req, res) => {
     try {
@@ -145,58 +203,10 @@ exports.assignStudentToSection = async (req, res) => {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
-        // Find grade configuration
-        const gradeConfig = await GradeSection.findOne({ grade, academicYear });
-
-        if (!gradeConfig) {
-            return res.status(400).json({ message: 'Grade configuration not found' });
-        }
-
-        // Find the first available section (not full)
-        const availableSection = gradeConfig.sections.find(s => s.currentStudentCount < s.maxStudents);
-
-        if (!availableSection) {
-            return res.status(400).json({ message: 'No available seats in any section for this grade' });
-        }
-
-        // Calculate roll number (sequential across all students in section)
-        const rollNumber = availableSection.currentStudentCount + 1;
-
-        // Update student profile
-        const student = await StudentProfile.findByIdAndUpdate(
-            studentId,
-            {
-                section: availableSection.sectionName,
-                rollNumber,
-                academicYear
-            },
-            { new: true }
-        );
-
-        if (!student) {
-            return res.status(404).json({ message: 'Student not found' });
-        }
-
-        // Update section count
-        availableSection.currentStudentCount++;
-        if (availableSection.currentStudentCount >= availableSection.maxStudents) {
-            availableSection.isFull = true;
-        }
-
-        gradeConfig.currentEnrollment++;
-        gradeConfig.updatedAt = new Date();
-
-        await gradeConfig.save();
-
+        const result = await exports.performStudentAssignment(studentId, grade, academicYear);
         res.status(200).json({
             message: 'Student assigned to section successfully',
-            student: {
-                studentId: student.studentId,
-                name: `${student.firstName} ${student.lastName}`,
-                section: student.section,
-                rollNumber: student.rollNumber,
-                grade: student.currentClass
-            }
+            student: result
         });
     } catch (error) {
         console.error('Error assigning student:', error);
@@ -213,63 +223,55 @@ exports.changeStudentSection = async (req, res) => {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
+        const StudentProfile = mongoose.model('StudentProfile');
+        const Classroom = mongoose.model('Classroom');
+
         // Get current student info
         const student = await StudentProfile.findById(studentId);
+        if (!student) return res.status(404).json({ message: 'Student not found' });
 
-        if (!student) {
-            return res.status(404).json({ message: 'Student not found' });
+        const oldSectionName = student.section;
+        const numericGradeStr = isNaN(parseInt(grade)) ? grade : parseInt(grade).toString();
+
+        // 1. Find new section and check capacity
+        const targetClassroom = await Classroom.findOne({ 
+            classNumber: numericGradeStr, 
+            section: newSection,
+            academicYear 
+        });
+
+        if (!targetClassroom) return res.status(404).json({ message: 'Target section not found' });
+        if (targetClassroom.studentIds.length >= targetClassroom.capacity) {
+            return res.status(400).json({ message: 'Target section is at full capacity' });
         }
 
-        // Find grade configuration
-        const gradeConfig = await GradeSection.findOne({ grade, academicYear });
-
-        if (!gradeConfig) {
-            return res.status(400).json({ message: 'Grade configuration not found' });
+        // 2. Remove student from old section if it exists
+        if (oldSectionName) {
+            await Classroom.updateOne(
+                { classNumber: numericGradeStr, section: oldSectionName, academicYear },
+                { $pull: { studentIds: student.user || studentId } }
+            );
         }
 
-        // Find old and new section
-        const oldSection = gradeConfig.sections.find(s => s.sectionName === student.section);
-        const newSectionObj = gradeConfig.sections.find(s => s.sectionName === newSection);
+        // 3. Assign new roll in target section
+        const newRollNumber = (targetClassroom.studentIds.length + 1).toString();
+        
+        // 4. Update Target Classroom
+        targetClassroom.studentIds.push(student.user || studentId);
+        await targetClassroom.save();
 
-        if (!newSectionObj) {
-            return res.status(404).json({ message: 'New section not found' });
-        }
-
-        // Check if new section has capacity
-        if (newSectionObj.currentStudentCount >= newSectionObj.maxStudents) {
-            return res.status(400).json({ message: 'New section is at full capacity' });
-        }
-
-        // Update counts
-        if (oldSection && student.section !== newSection) {
-            oldSection.currentStudentCount--;
-            oldSection.isFull = false;
-        }
-
-        // Calculate new roll number
-        const newRollNumber = newSectionObj.currentStudentCount + 1;
-        newSectionObj.currentStudentCount++;
-
-        if (newSectionObj.currentStudentCount >= newSectionObj.maxStudents) {
-            newSectionObj.isFull = true;
-        }
-
-        // Update student
+        // 5. Update Student Profile
         student.section = newSection;
         student.rollNumber = newRollNumber;
         await student.save();
-
-        gradeConfig.updatedAt = new Date();
-        await gradeConfig.save();
 
         res.status(200).json({
             message: 'Student section changed successfully',
             student: {
                 studentId: student.studentId,
                 name: `${student.firstName} ${student.lastName}`,
-                oldSection: oldSection?.sectionName,
-                newSection: student.section,
-                newRollNumber: student.rollNumber
+                section: student.section,
+                rollNumber: student.rollNumber
             }
         });
     } catch (error) {
@@ -314,3 +316,109 @@ exports.getSectionStatistics = async (req, res) => {
         res.status(500).json({ message: 'Error fetching statistics', error: error.message });
     }
 };
+
+// Get summary of all grades with sections and student counts
+exports.getGradeSummary = async (req, res) => {
+    try {
+        const { academicYear = new Date().getFullYear().toString() } = req.query;
+
+        // 1. Get all configured grades
+        const gradeConfigs = await GradeSection.find({ academicYear }).sort({ grade: 1 });
+
+        const summary = await Promise.all(gradeConfigs.map(async (gc) => {
+            // 2. Count ALL students registered for this grade and year globally
+            const totalRegistered = await StudentProfile.countDocuments({ 
+                currentClass: gc.grade.toString(), 
+                academicYear 
+            });
+
+            // 3. Find all classrooms (sections) deployed for this grade and year
+            const classrooms = await mongoose.model('Classroom').find({ 
+                classNumber: parseInt(gc.grade, 10),
+                academicYear 
+            }).populate('teacherId', 'name');
+            
+            // 4. Calculate total students successfully assigned and total seat capacity
+            const totalAssigned = classrooms.reduce((sum, c) => sum + (c.studentIds?.length || 0), 0);
+            const totalSeat = classrooms.reduce((sum, c) => sum + (c.capacity || 0), 0);
+
+            return {
+                grade: gc.grade,
+                configId: gc._id,
+                sectionCount: classrooms.length,
+                totalRegistered,
+                totalAssigned,
+                totalSeat,
+                totalCapacity: gc.totalCapacity,
+                sections: classrooms.map(c => ({
+                    _id: c._id,
+                    name: c.name,
+                    section: c.section,
+                    teacher: c.teacherId?.name || 'Unassigned',
+                    teacherId: c.teacherId?._id || c.teacherId, // Include ID for dropdown
+                    studentCount: c.studentIds?.length || 0,
+                    capacity: c.capacity || 30,
+                    leadSubject: c.leadSubject || '',
+                    leadSchedule: c.leadSchedule || [],
+                    courses: c.courses || [],
+                    isActive: c.isActive
+                }))
+            };
+        }));
+
+        res.status(200).json(summary);
+    } catch (error) {
+        console.error('Error fetching grade summary:', error);
+        res.status(500).json({ message: 'Error fetching grade summary', error: error.message });
+    }
+};
+
+exports.updateGradeConfiguration = async (req, res) => {
+    try {
+        const { grade, academicYear, totalCapacity } = req.body;
+        const config = await GradeSection.findById(req.params.id);
+
+        if (!config) {
+            return res.status(404).json({ message: 'Grade configuration not found' });
+        }
+
+        const oldGrade = config.grade;
+        const oldYear = config.academicYear;
+
+        // Update the Grade Config
+        if (grade) config.grade = grade;
+        if (academicYear) config.academicYear = academicYear;
+        if (totalCapacity) config.totalCapacity = totalCapacity;
+
+        await config.save();
+
+        // CASCADE: Update all existing sections (Classrooms) if the name or year changed
+        // This ensures they stay visible in the summary table
+        if (grade !== oldGrade || academicYear !== oldYear) {
+            const Classroom = mongoose.model('Classroom');
+            await Classroom.updateMany(
+                { classNumber: oldGrade, academicYear: oldYear },
+                { 
+                    classNumber: grade || oldGrade, 
+                    academicYear: academicYear || oldYear 
+                }
+            );
+            
+            // Also update Student Profiles so they stay in the right grade
+            const StudentProfile = mongoose.model('StudentProfile');
+            await StudentProfile.updateMany(
+                { currentClass: oldGrade.toString(), academicYear: oldYear },
+                { 
+                    currentClass: (grade || oldGrade).toString(), 
+                    academicYear: academicYear || oldYear 
+                }
+            );
+        }
+
+        res.status(200).json(config);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = exports;

@@ -17,7 +17,9 @@ router.get('/helpers/students', protect, authorize('admin', 'teacher'), classroo
 router.post('/', protect, authorize('admin'), classroomController.createClassroom);
 router.get('/', protect, classroomController.getClassrooms);
 router.get('/:id', protect, classroomController.getSingleClassroom);
+router.patch('/:id', protect, authorize('admin'), classroomController.updateClassroom);
 router.patch('/:id/activate', protect, authorize('admin'), classroomController.activateSection);
+router.delete('/:id', protect, authorize('admin'), classroomController.deleteClassroom);
 router.post('/:id/enroll', protect, authorize('admin', 'teacher'), classroomController.enrollStudent);
 
 // --- Feed ---

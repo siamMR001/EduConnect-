@@ -13,24 +13,19 @@ const xlsx = require('xlsx');
 
 exports.createClassroom = async (req, res) => {
     try {
-        const { classNumber, section, teacherId } = req.body;
-        const validSections = ['Sunrise', 'Horizon', 'Nova', 'Ember'];
-        if (!validSections.includes(section)) {
-            return res.status(400).json({ message: 'Invalid section name' });
+        const { classNumber, section, teacherId, capacity, leadSubject, leadSchedule, courses, academicYear } = req.body;
+        
+        if (!classNumber || !section || !teacherId || !leadSubject || !academicYear) {
+            return res.status(400).json({ message: 'Missing required fields' });
         }
 
         const name = `Class ${classNumber} — ${section}`;
+        const finalCapacity = parseInt(capacity, 10) || 30;
 
-        // Check if there is already this section
+        // Check if there is already this exact section for this class
         const existing = await Classroom.findOne({ classNumber, section });
         if (existing) {
-            return res.status(400).json({ message: 'This classroom section already exists' });
-        }
-
-        // Check limits
-        const classSections = await Classroom.find({ classNumber });
-        if (classSections.length >= 2) {
-            return res.status(400).json({ message: 'Maximum 2 sections allowed per class number' });
+            return res.status(400).json({ message: 'This section identity already exists for this grade' });
         }
 
         const classroom = new Classroom({
@@ -38,23 +33,34 @@ exports.createClassroom = async (req, res) => {
             classNumber,
             section,
             teacherId,
-            isActive: classSections.length === 0 // First section is active by default
+            capacity: finalCapacity,
+            leadSubject,
+            leadSchedule: leadSchedule || [],
+            courses: (courses || []).map(c => ({
+                ...c,
+                teacherId: c.teacherId === '' ? null : c.teacherId
+            })),
+            academicYear,
+            isActive: true // Newly deployed sections are active by default now
         });
 
-        // --- Auto-assign students based on serial ---
-        let classProfiles = await StudentProfile.find({});
+        // --- Auto-assign students who have already registered ---
+        let classProfiles = await StudentProfile.find({ user: { $ne: null } });
         classProfiles = classProfiles.filter(p => parseInt(p.currentClass, 10) === parseInt(classNumber, 10));
 
-        // Sort by profile creation date (serial)
+        // Sort by profile creation date
         classProfiles.sort((a, b) => {
             const dateA = new Date(a.createdAt).getTime();
             const dateB = new Date(b.createdAt).getTime();
             return dateA - dateB;
         });
 
-        // Determine which chunk of 30 students belongs to this section dynamically
-        const startIndex = classSections.length * 30;
-        const endIndex = startIndex + 30;
+        // Calculate offset based on sum of capacities of previous sections
+        const previousSections = await Classroom.find({ classNumber });
+        const totalPreviousCapacity = previousSections.reduce((sum, s) => sum + (s.capacity || 30), 0);
+        
+        const startIndex = totalPreviousCapacity;
+        const endIndex = startIndex + finalCapacity;
         const profilesForThisSection = classProfiles.slice(startIndex, endIndex);
 
         // Add their Object IDs to the classroom
@@ -63,6 +69,7 @@ exports.createClassroom = async (req, res) => {
         await classroom.save();
         res.status(201).json(classroom);
     } catch (error) {
+        console.error('Error creating classroom:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -111,7 +118,15 @@ exports.getSingleClassroom = async (req, res) => {
     try {
         const classroom = await Classroom.findById(req.params.id)
             .populate('teacherId', 'name email')
-            .populate('studentIds', 'name email');
+            .populate('courses.teacherId', 'name email')
+            .populate({
+                path: 'studentIds',
+                select: 'name email studentProfile',
+                populate: [
+                    { path: 'studentProfile', select: 'studentId rollNumber' },
+                    { path: 'profile', select: 'studentId rollNumber' }
+                ]
+            });
         if (!classroom) return res.status(404).json({ message: 'Classroom not found' });
         res.status(200).json(classroom);
     } catch (error) {
@@ -496,3 +511,63 @@ exports.deleteResult = async (req, res) => {
          res.status(500).json({ message: error.message });
     }
 };
+
+exports.updateClassroom = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { section, teacherId, capacity, leadSubject, leadSchedule, courses, isActive, name } = req.body;
+
+        const updatedData = {
+            name,
+            section,
+            teacherId,
+            capacity,
+            leadSubject,
+            leadSchedule: leadSchedule || [],
+            courses: (courses || []).map(c => ({
+                ...c,
+                teacherId: c.teacherId === '' ? null : c.teacherId
+            })),
+            isActive
+        };
+
+        // Remove undefined fields
+        Object.keys(updatedData).forEach(key => {
+            if (updatedData[key] === undefined) delete updatedData[key];
+        });
+
+        const classroom = await Classroom.findByIdAndUpdate(id, updatedData, { new: true });
+        if (!classroom) return res.status(404).json({ message: 'Section not found' });
+
+        res.status(200).json(classroom);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.activateSection = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const classroom = await Classroom.findById(id);
+        if (!classroom) return res.status(404).json({ message: 'Section not found' });
+
+        classroom.isActive = !classroom.isActive;
+        await classroom.save();
+        res.status(200).json(classroom);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.deleteClassroom = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const classroom = await Classroom.findByIdAndDelete(id);
+        if (!classroom) return res.status(404).json({ message: 'Section not found' });
+        res.status(200).json({ message: 'Section deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+

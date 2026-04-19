@@ -39,9 +39,9 @@ router.get('/', noticeController.getAllNotices);
 router.get('/:id', noticeController.getNoticeById);
 router.get('/category/:category', noticeController.getNoticesByCategory);
 
-router.post('/', protect, authorize('admin', 'teacher'), upload.array('attachments', 5), noticeController.createNotice);
-router.put('/:id', protect, authorize('admin', 'teacher'), upload.array('attachments', 5), noticeController.updateNotice);
-router.delete('/:id', protect, authorize('admin', 'teacher'), noticeController.deleteNotice);
+router.post('/', protect, authorize('admin'), upload.array('attachments', 5), noticeController.createNotice);
+router.put('/:id', protect, authorize('admin'), upload.array('attachments', 5), noticeController.updateNotice);
+router.delete('/:id', protect, authorize('admin'), noticeController.deleteNotice);
 
 router.get('/:noticeId/download/:attachmentIndex', noticeController.downloadAttachment);
 

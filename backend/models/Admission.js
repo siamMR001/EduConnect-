@@ -81,16 +81,23 @@ admissionSchema.pre('save', async function () {
 
         // Find the latest admission in the same year and class
         const prefixRegex = new RegExp(`^${year}${classCode}`);
-        const lastAdmission = await mongoose.model('Admission').findOne({
+        // Find the latest ID in Admissions
+        const lastInAdmissions = await mongoose.model('Admission').findOne({
+            studentId: prefixRegex
+        }).sort({ studentId: -1 });
+
+        // Find the latest ID in StudentProfiles
+        const lastInProfiles = await mongoose.model('StudentProfile').findOne({
             studentId: prefixRegex
         }).sort({ studentId: -1 });
 
         let sequence = 1;
-        if (lastAdmission && lastAdmission.studentId) {
-            // Extract the sequence part (last 4 characters)
-            const lastSeqStr = lastAdmission.studentId.slice(4);
-            sequence = parseInt(lastSeqStr, 10) + 1;
-        }
+        
+        // Extract sequence from both and find the actual max
+        const seqFromAdmissions = lastInAdmissions?.studentId ? parseInt(lastInAdmissions.studentId.slice(4), 10) : 0;
+        const seqFromProfiles = lastInProfiles?.studentId ? parseInt(lastInProfiles.studentId.slice(4), 10) : 0;
+        
+        sequence = Math.max(seqFromAdmissions, seqFromProfiles) + 1;
 
         const seqCode = sequence.toString().padStart(4, '0');
         this.studentId = `${year}${classCode}${seqCode}`; // e.g., 26070001

@@ -9,10 +9,10 @@ router.get('/', eventController.getAllEvents);
 router.get('/month/:month/:year', eventController.getEventsForMonth);
 router.get('/:id', eventController.getEventById);
 
-// Protected routes (admin/teacher only)
-router.post('/', protect, authorize('admin', 'teacher'), eventController.createEvent);
-router.put('/:id', protect, authorize('admin', 'teacher'), eventController.updateEvent);
-router.delete('/:id', protect, authorize('admin', 'teacher'), eventController.deleteEvent);
+// Protected routes (admin only)
+router.post('/', protect, authorize('admin'), eventController.createEvent);
+router.put('/:id', protect, authorize('admin'), eventController.updateEvent);
+router.delete('/:id', protect, authorize('admin'), eventController.deleteEvent);
 
 // User registration routes
 router.post('/:id/register', protect, eventController.registerForEvent);

@@ -15,9 +15,12 @@ import AdminTeacherDashboard from './pages/AdminTeacherDashboard';
 import TeacherRegister from './pages/TeacherRegister';
 import AdminGradeConfig from './pages/AdminGradeConfig';
 import AdminStudentAssignment from './pages/AdminStudentAssignment';
+import TeacherProfile from './pages/TeacherProfile';
 import Classrooms from './pages/Classrooms';
 import ClassroomView from './pages/ClassroomView';
 import Gradesheet from './pages/Gradesheet';
+import AdminSettings from './pages/AdminSettings';
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const [user, setUser] = useState(() => {
@@ -96,13 +99,16 @@ function App() {
                   {user?.role === 'admin' && (
                     <>
                       <Link to="/admin/teachers" className="text-slate-300 hover:text-white font-medium transition-colors">
-                        Teachers
+                        TEM
                       </Link>
                       <Link to="/admin/grades" className="text-slate-300 hover:text-white font-medium transition-colors">
                         Grades
                       </Link>
                       <Link to="/admin/students" className="text-slate-300 hover:text-white font-medium transition-colors">
                         Students
+                      </Link>
+                      <Link to="/admin/settings" className="text-slate-300 hover:text-white font-medium transition-colors">
+                        Settings
                       </Link>
                     </>
                   )}
@@ -142,7 +148,7 @@ function App() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 w-full">
+        <main className="flex-1 p-6 w-full relative">
           <Routes>
             <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login />} />
             <Route path="/dashboard" element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" replace />} />
@@ -151,19 +157,55 @@ function App() {
             <Route path="/student-assignments" element={isLoggedIn && user?.role === 'student' ? <StudentAssignments /> : <Navigate to="/dashboard" replace />} />
             <Route path="/teacher-assignments" element={isLoggedIn && user?.role === 'teacher' ? <TeacherAssignments /> : <Navigate to="/dashboard" replace />} />
             <Route path="/apply" element={<AdmissionForm />} />
-            <Route path="/profile" element={isLoggedIn ? <StudentProfile /> : <Navigate to="/login" replace />} />
-            <Route path="/profile/:id" element={isLoggedIn ? <StudentProfile /> : <Navigate to="/login" replace />} />
+            <Route path="/profile" element={
+              isLoggedIn ? (
+                user?.role === 'student' ? <StudentProfile /> : <TeacherProfile />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } />
+            <Route path="/profile/:id" element={
+              isLoggedIn ? (
+                user?.role === 'admin' ? (
+                   // If admin clicks profile/:id, we need to know if that ID belongs to a student or teacher
+                   // For now, assume id-based lookups from directory are students unless specified
+                   // But since directory only shows students, and admin/teachers shows teachers,
+                   // we can keep it as StudentProfile for now or make it polymorphic later.
+                   // Let's assume StudentProfile for :id unless we add Teacher/:id support.
+                   <StudentProfile />
+                ) : <Navigate to="/dashboard" replace />
+              ) : <Navigate to="/login" replace />
+            } />
             <Route path="/directory" element={isLoggedIn && user?.role !== 'student' ? <StudentDirectory /> : <Navigate to="/dashboard" replace />} />
-            <Route path="/teacher-register" element={<TeacherRegister />} />
+            <Route path="/teacher-registration" element={<TeacherRegister />} />
             <Route path="/classrooms" element={isLoggedIn ? <Classrooms /> : <Navigate to="/login" replace />} />
             <Route path="/classrooms/:id" element={isLoggedIn ? <ClassroomView /> : <Navigate to="/login" replace />} />
             <Route path="/gradesheet" element={isLoggedIn ? <Gradesheet /> : <Navigate to="/login" replace />} />
             <Route path="/admin/teachers" element={isLoggedIn && user?.role === 'admin' ? <AdminTeacherDashboard /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/grades" element={isLoggedIn && user?.role === 'admin' ? <AdminGradeConfig /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/students" element={isLoggedIn && user?.role === 'admin' ? <AdminStudentAssignment /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/admin/settings" element={isLoggedIn && user?.role === 'admin' ? <AdminSettings /> : <Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />} />
           </Routes>
         </main>
+
+        {/* Global Footer Credits */}
+        <footer className="w-full py-8 px-6 border-t border-white/5 bg-black/10 backdrop-blur-md">
+           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                 <div className="w-1 h-4 bg-primary rounded-full"></div>
+                 <p className="text-slate-400 text-sm font-bold tracking-tight">
+                    EduConnect <span className="text-slate-600 font-medium">| Institutional System</span>
+                 </p>
+              </div>
+              <p className="text-slate-500 text-[11px] font-black uppercase tracking-[0.2em]">
+                 Crafted with passion by <span className="text-primary hover:text-primary-light transition-colors cursor-default">Siam, Paro, Veer</span>
+              </p>
+              <div className="text-slate-600 text-[10px] font-medium uppercase tracking-widest">
+                 © 2026 EDUCONNECT. ALL RIGHTS RESERVED.
+              </div>
+           </div>
+        </footer>
       </div>
     </div>
   );

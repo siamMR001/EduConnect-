@@ -7,7 +7,7 @@ export default function AdminStudentAssignment() {
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [academicYear] = useState('2025-2026');
+  const [academicYear] = useState(new Date().getFullYear().toString());
   const [selectedGrade, setSelectedGrade] = useState('6');
   const [sectionStats, setSectionStats] = useState(null);
   const [assigningStudent, setAssigningStudent] = useState(null);
@@ -18,7 +18,8 @@ export default function AdminStudentAssignment() {
     try {
       setLoading(true);
       const data = await gradeService.getAllGrades(academicYear);
-      setGrades(data.grades || []);
+      const sorted = (data.grades || []).sort((a, b) => (parseInt(a.grade) || 0) - (parseInt(b.grade) || 0));
+      setGrades(sorted);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,14 +46,18 @@ export default function AdminStudentAssignment() {
     }
   }, [selectedGrade]);
 
+  // Fetch students for the selected grade from real API
   const fetchStudentsForGrade = async (grade) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students?currentClass=${grade}`);
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const apiUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
+      const response = await fetch(`${apiUrl}/students?currentClass=${grade}`);
       if (!response.ok) throw new Error('Failed to fetch students');
       const data = await response.json();
       setStudents(data);
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      setError('Failed to fetch students for this grade');
     }
   };
 
