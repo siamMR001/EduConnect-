@@ -14,7 +14,10 @@ const teacherService = {
         },
       }
     );
-    if (!response.ok) throw new Error('Failed to fetch employees');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch employees');
+    }
     return response.json();
   },
 
@@ -27,14 +30,20 @@ const teacherService = {
         'Content-Type': 'application/json',
       },
     });
-    if (!response.ok) throw new Error('Failed to fetch employee');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch employee');
+    }
     return response.json();
   },
 
   // Get employee by Employee ID (for registration page - public)
   getEmployeeByEmployeeId: async (employeeId) => {
     const response = await fetch(`${API_URL}/teachers/by-employee-id/${employeeId}`);
-    if (!response.ok) throw new Error('Employee ID not found');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Employee ID not found');
+    }
     return response.json();
   },
 
@@ -49,7 +58,10 @@ const teacherService = {
       },
       body: JSON.stringify(teacherData),
     });
-    if (!response.ok) throw new Error('Failed to add teacher');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to add teacher');
+    }
     return response.json();
   },
 
@@ -62,7 +74,10 @@ const teacherService = {
       },
       body: JSON.stringify({ employeeId, registrationCode }),
     });
-    if (!response.ok) throw new Error('Invalid registration code');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Invalid registration code');
+    }
     return response.json();
   },
 
@@ -77,7 +92,10 @@ const teacherService = {
       },
       body: JSON.stringify({ status }),
     });
-    if (!response.ok) throw new Error('Failed to update employee status');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update employee status');
+    }
     return response.json();
   },
 
@@ -91,7 +109,10 @@ const teacherService = {
         'Content-Type': 'application/json',
       },
     });
-    if (!response.ok) throw new Error('Failed to regenerate registration code');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to regenerate registration code');
+    }
     return response.json();
   },
 
@@ -105,7 +126,10 @@ const teacherService = {
         'Content-Type': 'application/json',
       },
     });
-    if (!response.ok) throw new Error('Failed to delete employee');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to delete employee');
+    }
     return response.json();
   },
 

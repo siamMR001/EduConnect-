@@ -395,7 +395,7 @@ const Dashboard = () => {
                                 <Bell className="text-primary-light" size={24} />
                                 Digital Notice Board
                             </h2>
-                            {(user.role === 'admin' || user.role === 'teacher') && (
+                            {user.role === 'admin' && (
                                 <button onClick={() => setShowNoticeModal(true)} className="btn-primary flex items-center gap-1 text-sm py-1.5 px-3">
                                     <Plus size={16} /> New Notice
                                 </button>
@@ -405,7 +405,7 @@ const Dashboard = () => {
                         <div className="grid gap-4">
                             {notices.map((notice) => (
                                 <div key={notice._id || notice.id} className="glass-panel p-5 border-l-4 border-l-primary hover:border-l-primary-light transition-all duration-300 transform hover:-translate-y-1 relative group">
-                                    {(user.role === 'admin' || user.role === 'teacher') && (
+                                    {user.role === 'admin' && (
                                         <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                             <button onClick={(e) => { e.stopPropagation(); setEditingNotice({ ...notice }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
                                                 <Pencil size={14} />
@@ -454,7 +454,7 @@ const Dashboard = () => {
                                     <span className="block text-sm font-normal text-slate-400 mt-0.5">&amp; Club Activities</span>
                                 </span>
                             </h2>
-                            {(user.role === 'admin' || user.role === 'teacher') && (
+                            {user.role === 'admin' && (
                                 <button onClick={() => setShowEventModal(true)} className="btn-primary flex items-center gap-1 text-sm py-1.5 px-3 shrink-0">
                                     <Plus size={16} /> New Event
                                 </button>
@@ -465,7 +465,7 @@ const Dashboard = () => {
                             <div className="space-y-5">
                                 {events.map((evt) => (
                                     <div key={evt._id || evt.id} className="group flex gap-4 items-start p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 cursor-pointer relative">
-                                        {(user.role === 'admin' || user.role === 'teacher') && (
+                                        {user.role === 'admin' && (
                                             <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                                 <button onClick={(e) => { e.stopPropagation(); setEditingEvent({ ...evt, date: new Date(evt.date).toISOString().slice(0, 16) }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
                                                     <Pencil size={14} />

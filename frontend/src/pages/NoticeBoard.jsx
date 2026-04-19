@@ -11,6 +11,7 @@ export default function NoticeBoard() {
     const [selectedNotice, setSelectedNotice] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [user, setUser] = useState(null);
 
     // Filters
     const [filters, setFilters] = useState({
@@ -26,6 +27,7 @@ export default function NoticeBoard() {
         category: 'announcement',
         priority: 'normal',
         targetRole: 'all',
+        date: '',
         expiryDate: ''
     });
     const [attachedFiles, setAttachedFiles] = useState([]);
@@ -77,6 +79,11 @@ export default function NoticeBoard() {
         filterAndSort(notices);
     }, [filters.search]);
 
+    useEffect(() => {
+        const userData = JSON.parse(localStorage.getItem('user'));
+        setUser(userData);
+    }, []);
+
     // Handle form submission
     const handleCreateNotice = async (e) => {
         e.preventDefault();
@@ -89,6 +96,7 @@ export default function NoticeBoard() {
                 category: 'announcement',
                 priority: 'normal',
                 targetRole: 'all',
+                date: '',
                 expiryDate: ''
             });
             setAttachedFiles([]);
@@ -131,13 +139,15 @@ export default function NoticeBoard() {
                         <Bell className="w-8 h-8 text-primary-light" />
                         <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white">Notice Board</h1>
                     </div>
-                    <button
-                        onClick={() => setShowCreateForm(!showCreateForm)}
-                        className="btn-primary flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        New Notice
-                    </button>
+                    {user?.role === 'admin' && (
+                        <button
+                            onClick={() => setShowCreateForm(!showCreateForm)}
+                            className="btn-primary flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            New Notice
+                        </button>
+                    )}
                 </div>
 
                 {/* Error Message */}
@@ -226,6 +236,18 @@ export default function NoticeBoard() {
                                         <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
                                     ))}
                                 </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-200 mb-2">Notice Date (For Calendar)</label>
+                                <input
+                                    type="date"
+                                    value={formData.date}
+                                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                    className="input-field"
+                                />
                             </div>
 
                             <div>

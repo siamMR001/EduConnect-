@@ -157,17 +157,17 @@ export default function AdminStudentAssignment() {
         </div>
       )}
 
-      {/* Grade Selector */}
+      {/* Class Selector */}
       <div className="mb-6 flex gap-4">
         <div>
-          <label className="text-slate-400 text-sm">Select Grade</label>
+          <label className="text-slate-400 text-sm">Select Class</label>
           <select
             value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
             className="mt-1 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white"
           >
             {GRADES.map(g => (
-              <option key={g} value={g}>Grade {g}</option>
+              <option key={g} value={g}>Class {g}</option>
             ))}
           </select>
         </div>
@@ -180,7 +180,7 @@ export default function AdminStudentAssignment() {
           {/* Section Status Panel */}
           <div className="lg:col-span-1">
             <div className="glass-panel border border-white/10 rounded-lg p-6">
-              <h3 className="text-white font-bold mb-4">Section Status - Grade {selectedGrade}</h3>
+              <h3 className="text-white font-bold mb-4">Section Status - Class {selectedGrade}</h3>
               <div className="space-y-4">
                 {getAvailableSections().map((section) => {
                   const status = getSectionStatus(section);
@@ -222,9 +222,9 @@ export default function AdminStudentAssignment() {
           {/* Students Assignment Panel */}
           <div className="lg:col-span-2">
             <div className="glass-panel border border-white/10 rounded-lg p-6">
-              <h3 className="text-white font-bold mb-4">Students - Grade {selectedGrade}</h3>
+              <h3 className="text-white font-bold mb-4">Students - Class {selectedGrade}</h3>
               {students.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">No students for this grade</div>
+                <div className="text-center py-8 text-slate-400">No students for this class</div>
               ) : (
                 <div className="space-y-3">
                   {students.map((student) => (
