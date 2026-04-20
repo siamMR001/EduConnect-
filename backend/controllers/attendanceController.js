@@ -50,16 +50,17 @@ exports.markAttendance = async (req, res) => {
                 const student = await User.findById(studentId);
                 const profile = await StudentProfile.findOne({ user: studentId });
                 
-                if (profile && (profile.fatherEmail || profile.motherEmail || profile.guardianEmail)) {
+                // Safety check: ensure student and profile exist before sending email
+                if (student && profile && (profile.guardianEmail || profile.fatherEmail || profile.motherEmail)) {
                     const recipientEmail = profile.guardianEmail || profile.fatherEmail || profile.motherEmail;
                     
                     let personalizedMessage = emailTemplate
-                        .replace('{{studentName}}', student.name)
+                        .replace('{{studentName}}', student.name || 'Student')
                         .replace('{{date}}', startOfDay.toDateString());
 
                     emailsToSend.push({
                         email: recipientEmail,
-                        subject: `Absence Alert: ${student.name}`,
+                        subject: `Absence Alert: ${student.name || 'Notice'}`,
                         message: personalizedMessage
                     });
                 }
@@ -77,7 +78,10 @@ exports.markAttendance = async (req, res) => {
 
     } catch (error) {
         console.error('Mark Attendance Error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ 
+            message: 'Failed to save attendance records. Please check student data or try again later.', 
+            error: error.message 
+        });
     }
 };
 
@@ -119,6 +123,74 @@ exports.getStudentStats = async (req, res) => {
             absent,
             percentage: total > 0 ? ((present / total) * 100).toFixed(2) : 100,
             history: records.sort((a, b) => b.date - a.date)
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get comprehensive attendance report for a classroom
+// @route   GET /api/attendance/summary/:classroomId
+exports.getClassroomSummary = async (req, res) => {
+    try {
+        const { classroomId } = req.params;
+
+        // 1. Get all students in the classroom
+        const classroom = await Classroom.findById(classroomId)
+            .populate({
+                path: 'studentIds',
+                select: 'name studentProfile profile',
+                populate: [
+                    { path: 'studentProfile', select: 'studentId rollNumber' },
+                    { path: 'profile', select: 'studentId rollNumber' }
+                ]
+            });
+        if (!classroom) return res.status(404).json({ message: 'Classroom not found' });
+
+        // Authorization check: Admin, Teacher of class, or Student in class
+        const isStudentInClass = classroom.studentIds.some(s => s._id.toString() === req.user._id.toString());
+        const isTeacherOfClass = classroom.teacherId.toString() === req.user._id.toString();
+        
+        if (req.user.role !== 'admin' && !isTeacherOfClass && !isStudentInClass) {
+            return res.status(403).json({ message: 'Not authorized to view this record' });
+        }
+
+        // 2. Get all attendance records for this classroom
+        const records = await Attendance.find({ classroomId }).sort({ date: 1 });
+
+        // 3. Extract unique dates
+        const uniqueDates = Array.from(new Set(records.map(r => r.date.toISOString().split('T')[0]))).sort();
+
+        // 4. Map records by student
+        const summary = classroom.studentIds.map(student => {
+            const studentRecords = records.filter(r => r.studentId.toString() === student._id.toString());
+            
+            const attendanceMap = {};
+            let presentCount = 0;
+            
+            studentRecords.forEach(r => {
+                const dateKey = r.date.toISOString().split('T')[0];
+                attendanceMap[dateKey] = r.status === 'present' ? 'PR' : 'AB';
+                if (r.status === 'present') presentCount++;
+            });
+
+            const roll = student.studentProfile?.rollNumber || student.profile?.rollNumber || '—';
+            const sId = student.studentProfile?.studentId || student.profile?.studentId || '—';
+
+            return {
+                studentId: student._id,
+                name: student.name,
+                roll,
+                sId,
+                attendance: attendanceMap,
+                totalPresent: presentCount,
+                totalDays: studentRecords.length
+            };
+        });
+
+        res.status(200).json({
+            dates: uniqueDates,
+            summary
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

@@ -29,9 +29,11 @@ export default function ClassroomView() {
   const [resultFile, setResultFile] = useState(null);
    // Attendance
    const [attendanceRecords, setAttendanceRecords] = useState([]);
-   const [studentStats, setStudentStats] = useState(null);
+   const [attendanceReport, setAttendanceReport] = useState({ dates: [], summary: [] });
+   const [attendanceView, setAttendanceView] = useState('daily'); // 'daily' or 'history'
    const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
    const [isMarking, setIsMarking] = useState(false);
+   const [studentStats, setStudentStats] = useState(null);
 
    // Subjects Hub
    const [selectedSubject, setSelectedSubject] = useState(null);
@@ -242,18 +244,29 @@ export default function ClassroomView() {
   // --- Attendance Logic ---
   const fetchAttendanceData = async () => {
     try {
-      if (user.role === 'teacher' || user.role === 'admin') {
-         // Fetch today's records for marking
+      const isAdminOrTeacher = user?.role === 'teacher' || user?.role === 'admin';
+      
+      // Students should always see history by default, Teachers see daily marking
+      const viewToFetch = (user?.role === 'student') ? 'history' : attendanceView;
+
+      if (viewToFetch === 'daily' && isAdminOrTeacher) {
          const res = await api.get(`/attendance/classroom/${id}?date=${attendanceDate}`);
-         setAttendanceRecords(res.data);
+         setAttendanceRecords(res.data || []);
+      } else if (viewToFetch === 'history' || user?.role === 'student') {
+         const res = await api.get(`/attendance/summary/${id}`);
+         setAttendanceReport(res.data || { dates: [], summary: [] });
       }
       
-      if (user.role === 'student') {
+      if (user?.role === 'student' && user?._id) {
          const res = await api.get(`/attendance/stats/${id}/${user._id}`);
-         setStudentStats(res.data);
+         setStudentStats(res.data || null);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error('Attendance fetch error:', err); }
   };
+
+  useEffect(() => {
+     if (activeTab === 'Attendance') fetchAttendanceData();
+  }, [attendanceView, attendanceDate]);
 
   const handleMarkAttendance = async (studentId, status) => {
     // Optimistic UI update
@@ -278,7 +291,10 @@ export default function ClassroomView() {
        await api.post(`/attendance/mark/${id}`, { records: recordsToSubmit, date: attendanceDate });
        alert('Attendance marked and alerts sent!');
        fetchAttendanceData();
-     } catch (err) { alert('Failed to save attendance'); }
+     } catch (err) { 
+        const errorMsg = err.response?.data?.message || 'Failed to save attendance. Please try again.';
+        alert(errorMsg); 
+     }
      finally { setIsMarking(false); }
   };
 
@@ -645,7 +661,7 @@ export default function ClassroomView() {
 
           {user?.role === 'teacher' && results.length > 0 && (
              <div className="text-slate-400 text-center py-6 glass-panel rounded-xl">
-               Results are uploaded successfully. Use the <Link to="/gradesheet" className="text-blue-400 hover:underline">Global Gradesheet</Link> to search and view individual student histories.
+Results are uploaded successfully. Use the <Link to="/gradesheet" className="text-blue-400 hover:underline">Global Gradesheet</Link> to search and view individual student histories.
              </div>
           )}
         </div>
@@ -653,13 +669,29 @@ export default function ClassroomView() {
       {/* ATTENDANCE TAB */}
       {activeTab === 'Attendance' && (
         <div className="space-y-6">
-           {(user?.role === 'teacher' || user?.role === 'admin') && (
-              <div className="glass-panel p-6 rounded-2xl animate-fade-in border border-white/5">
-                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                    <div>
-                       <h3 className="text-xl font-bold text-white tracking-tight">Daily Roll Call</h3>
-                       <p className="text-slate-400 text-sm">Automated parent alerts trigger for <span className="text-red-400 font-bold italic">ABSENCES</span></p>
+           {/* Main Workspace (Visible to Teachers/Admins, and Students for History) */}
+           <div className="glass-panel p-6 rounded-2xl animate-fade-in border border-white/5">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                 <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight">Attendance Workspace</h3>
+                    <div className="flex gap-4 mt-2">
+                       {(user?.role === 'teacher' || user?.role === 'admin') && (
+                          <button 
+                            onClick={() => setAttendanceView('daily')}
+                            className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${attendanceView === 'daily' ? 'text-blue-500 border-blue-500' : 'text-slate-500 border-transparent hover:text-slate-300'}`}
+                          >
+                             Daily Roll Call
+                          </button>
+                       )}
+                       <button 
+                         onClick={() => setAttendanceView('history')}
+                         className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${attendanceView === 'history' || (user?.role === 'student' && attendanceView === 'daily') ? 'text-blue-500 border-blue-500' : 'text-slate-500 border-transparent hover:text-slate-300'}`}
+                       >
+                          History Timeline
+                       </button>
                     </div>
+                 </div>
+                 {attendanceView === 'daily' && (user?.role === 'teacher' || user?.role === 'admin') && (
                     <div className="flex items-center gap-4 bg-black/40 p-2 rounded-2xl border border-white/5">
                        <input 
                          type="date" 
@@ -675,8 +707,10 @@ export default function ClassroomView() {
                          {isMarking ? 'Processing...' : 'Save & Notify'}
                        </button>
                     </div>
-                 </div>
+                 )}
+              </div>
 
+              {(attendanceView === 'daily' && (user?.role === 'teacher' || user?.role === 'admin')) ? (
                  <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                        <thead>
@@ -740,9 +774,60 @@ export default function ClassroomView() {
                        </tbody>
                     </table>
                  </div>
-              </div>
-           )}
+              ) : (
+                 <div className="overflow-x-auto relative shadow-2xl rounded-2xl border border-white/5 bg-black/20">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
+                       <thead>
+                          <tr className="bg-black/60 border-b border-white/10 text-slate-500 text-[9px] font-black uppercase tracking-widest sticky top-0 z-20">
+                             <th className="p-4 px-6 text-center sticky left-0 z-30 bg-black/80 backdrop-blur-md border-r border-white/5 min-w-[60px]">Roll</th>
+                             <th className="p-4 px-6 sticky left-[60px] z-30 bg-black/80 backdrop-blur-md border-r border-white/5 min-w-[120px]">Student ID</th>
+                             <th className="p-4 px-6 sticky left-[180px] z-30 bg-black/80 backdrop-blur-md border-r border-white/5 min-w-[180px]">Student Name</th>
+                             {attendanceReport?.dates?.map(date => {
+                                const d = new Date(date);
+                                if (isNaN(d.getTime())) return <th key={date} className="p-4 px-2 text-center min-w-[60px]">—</th>;
+                                return (
+                                   <th key={date} className="p-4 px-2 text-center min-w-[60px]">
+                                      <div className="flex flex-col items-center">
+                                         <span className="text-white text-[10px] font-bold">{d.getDate()}</span>
+                                         <span className="text-[7px] text-slate-500 uppercase">{d.toLocaleString('default', { month: 'short' })}</span>
+                                      </div>
+                                   </th>
+                                );
+                             })}
+                             <th className="p-4 px-6 text-right sticky right-0 z-30 bg-black/80 backdrop-blur-md border-l border-white/5">Summary</th>
+                          </tr>
+                       </thead>
+                       <tbody className="divide-y divide-white/5">
+                          {attendanceReport?.summary?.map(s => (
+                             <tr key={s?.studentId || Math.random()} className="hover:bg-white/[0.02] transition-colors group">
+                                <td className="p-4 px-6 text-center sticky left-0 z-10 bg-[#0f0f1a] group-hover:bg-[#1a1a2e] border-r border-white/5 text-slate-400 font-bold text-xs">{s?.roll || '—'}</td>
+                                <td className="p-4 px-6 sticky left-[60px] z-10 bg-[#0f0f1a] group-hover:bg-[#1a1a2e] border-r border-white/5 font-mono text-[10px] text-blue-400/70">{s?.sId || '—'}</td>
+                                <td className="p-4 px-6 sticky left-[180px] z-10 bg-[#0f0f1a] group-hover:bg-[#1a1a2e] border-r border-white/5 font-bold text-white text-sm">{s?.name || '—'}</td>
+                                {attendanceReport?.dates?.map(date => (
+                                   <td key={date} className="p-4 px-2 text-center">
+                                      {s?.attendance?.[date] ? (
+                                         <span className={`text-[9px] font-black px-2 py-1 rounded-md ${s.attendance[date] === 'PR' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                            {s.attendance[date]}
+                                         </span>
+                                      ) : (
+                                         <span className="text-slate-700 font-black">—</span>
+                                      )}
+                                   </td>
+                                ))}
+                                <td className="p-4 px-6 text-right sticky right-0 z-10 bg-[#0f0f1a] group-hover:bg-[#1a1a2e] border-l border-white/5">
+                                   <span className={`text-xs font-black p-2 rounded-lg bg-white/5 ${s?.totalDays > 0 && (s?.totalPresent / s?.totalDays) >= 0.9 ? 'text-green-400' : s?.totalDays > 0 && (s?.totalPresent / s?.totalDays) >= 0.75 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                      {s?.totalPresent || 0}/{s?.totalDays || 0}
+                                   </span>
+                                </td>
+                             </tr>
+                          ))}
+                       </tbody>
+                    </table>
+                 </div>
+              )}
+           </div>
 
+           {/* Personal Student Stats (Only for Students) */}
            {user?.role === 'student' && studentStats && (
               <div className="space-y-6 animate-fade-in">
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -760,42 +845,6 @@ export default function ClassroomView() {
                        <div className="absolute inset-0 bg-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                        <div className="text-5xl font-black text-red-400 mb-2 relative z-10">{studentStats.absent}</div>
                        <p className="text-slate-500 text-[10px] uppercase font-black tracking-[0.3em] relative z-10">Days Absent</p>
-                    </div>
-                 </div>
-
-                 <div className="glass-panel rounded-3xl overflow-hidden border border-white/5">
-                    <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-                       <h3 className="text-white font-bold tracking-tight text-lg">Activity History</h3>
-                       <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span className="text-slate-400 text-xs font-medium uppercase tracking-widest">Verified History</span>
-                       </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                       <table className="w-full text-left">
-                          <thead>
-                             <tr className="bg-black/40 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">
-                                <th className="p-6 px-8">Calendar Date</th>
-                                <th className="p-6">Status Record</th>
-                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5">
-                             {studentStats.history?.length > 0 ? studentStats.history.map(r => (
-                                <tr key={r._id} className="hover:bg-white/[0.02] transition-colors group">
-                                   <td className="p-5 px-8 text-white font-semibold">{new Date(r.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
-                                   <td className="p-5">
-                                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${r.status === 'present' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                                         {r.status}
-                                      </span>
-                                   </td>
-                                </tr>
-                             )) : (
-                                <tr>
-                                   <td colSpan="2" className="p-10 text-center text-slate-500 italic font-medium">No activity records established yet.</td>
-                                </tr>
-                             )}
-                          </tbody>
-                       </table>
                     </div>
                  </div>
               </div>

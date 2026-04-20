@@ -15,11 +15,10 @@ const sendEmail = async (options) => {
 
     // 2) Define the email options
     const mailOptions = {
-        from: '"EduConnect System" <noreply@educonnect.com>',
+        from: `"EduConnect" <${process.env.EMAIL_USER}>`,
         to: options.email,
         subject: options.subject,
         text: options.message,
-        // html: options.html
     };
 
     // 3) Actually send the email

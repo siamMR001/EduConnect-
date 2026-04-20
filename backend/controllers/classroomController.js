@@ -128,6 +128,15 @@ exports.getSingleClassroom = async (req, res) => {
                 ]
             });
         if (!classroom) return res.status(404).json({ message: 'Classroom not found' });
+
+        // Authorization check: Students can only access their own classroom
+        if (req.user.role === 'student') {
+            const isStudentInClass = classroom.studentIds.some(s => s._id.toString() === req.user._id.toString());
+            if (!isStudentInClass) {
+                return res.status(403).json({ message: 'Not authorized: You are not enrolled in this section.' });
+            }
+        }
+
         res.status(200).json(classroom);
     } catch (error) {
         res.status(500).json({ message: error.message });

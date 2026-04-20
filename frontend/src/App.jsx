@@ -161,12 +161,8 @@ function App() {
             } />
             <Route path="/profile/:id" element={
               isLoggedIn ? (
-                user?.role === 'admin' ? (
-                   // If admin clicks profile/:id, we need to know if that ID belongs to a student or teacher
-                   // For now, assume id-based lookups from directory are students unless specified
-                   // But since directory only shows students, and admin/teachers shows teachers,
-                   // we can keep it as StudentProfile for now or make it polymorphic later.
-                   // Let's assume StudentProfile for :id unless we add Teacher/:id support.
+                (user?.role === 'admin' || user?.role === 'teacher') ? (
+                   // If admin or teacher clicks profile/:id, we show StudentProfile
                    <StudentProfile />
                 ) : <Navigate to="/dashboard" replace />
               ) : <Navigate to="/login" replace />

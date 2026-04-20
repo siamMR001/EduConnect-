@@ -125,8 +125,7 @@ const Login = () => {
                                     required={!isLoginMode && activeTab !== 'student'}
                                     value={formData.name}
                                     onChange={(e) => {
-                                        const val = activeTab === 'teacher' ? e.target.value.toUpperCase() : e.target.value;
-                                        setFormData({ ...formData, name: val });
+                                        setFormData({ ...formData, name: e.target.value });
                                     }}
                                     className="input-field pl-10"
                                     placeholder={activeTab === 'teacher' ? 'Employee ID (e.g. TCH-2026-0001)' : 'Full Name'}
@@ -141,7 +140,7 @@ const Login = () => {
                                     type="text"
                                     required={!isLoginMode && activeTab === 'student'}
                                     value={formData.studentId}
-                                    onChange={(e) => setFormData({ ...formData, studentId: e.target.value.toUpperCase() })}
+                                    onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
                                     className="input-field pl-10"
                                     placeholder="Approved Student ID (e.g. 26090001)"
                                 />
@@ -155,8 +154,7 @@ const Login = () => {
                                 required
                                 value={formData.email}
                                 onChange={(e) => {
-                                    const val = (isLoginMode && activeTab === 'teacher') ? e.target.value.toUpperCase() : e.target.value;
-                                    setFormData({ ...formData, email: val });
+                                    setFormData({ ...formData, email: e.target.value });
                                 }}
                                 className="input-field pl-10"
                                 placeholder={isLoginMode ? (activeTab === 'teacher' ? 'Email or Employee ID' : 'Email or Student ID') : "Email address"}
