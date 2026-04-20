@@ -12,7 +12,6 @@ import StudentAssignments from './pages/StudentAssignments';
 import TeacherAssignments from './pages/TeacherAssignments';
 import AdminTeacherDashboard from './pages/AdminTeacherDashboard';
 import TeacherRegister from './pages/TeacherRegister';
-import AdminGradeConfig from './pages/AdminGradeConfig';
 import AdminStudentAssignment from './pages/AdminStudentAssignment';
 import TeacherProfile from './pages/TeacherProfile';
 import Classrooms from './pages/Classrooms';
@@ -80,8 +79,8 @@ function App() {
                   <Link to="/calendar" className="text-slate-300 hover:text-white font-medium transition-colors">
                     Calendar
                   </Link>
-                  {(user?.role === 'student' || user?.role === 'teacher') && (
-                    <Link to={user?.role === 'student' ? '/student-assignments' : '/teacher-assignments'} className="text-slate-300 hover:text-white font-medium transition-colors">
+                  {user?.role === 'teacher' && (
+                    <Link to='/teacher-assignments' className="text-slate-300 hover:text-white font-medium transition-colors">
                       Assignments
                     </Link>
                   )}
@@ -96,9 +95,6 @@ function App() {
                     <>
                       <Link to="/admin/teachers" className="text-slate-300 hover:text-white font-medium transition-colors">
                         TEM
-                      </Link>
-                      <Link to="/admin/grades" className="text-slate-300 hover:text-white font-medium transition-colors">
-                        Classes
                       </Link>
                       <Link to="/admin/students" className="text-slate-300 hover:text-white font-medium transition-colors">
                         Students
@@ -173,7 +169,6 @@ function App() {
             <Route path="/classrooms/:id" element={isLoggedIn ? <ClassroomView /> : <Navigate to="/login" replace />} />
             <Route path="/gradesheet" element={isLoggedIn ? <Gradesheet /> : <Navigate to="/login" replace />} />
             <Route path="/admin/teachers" element={isLoggedIn && user?.role === 'admin' ? <AdminTeacherDashboard /> : <Navigate to="/dashboard" replace />} />
-            <Route path="/admin/grades" element={isLoggedIn && user?.role === 'admin' ? <AdminGradeConfig /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/students" element={isLoggedIn && user?.role === 'admin' ? <AdminStudentAssignment /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/settings" element={isLoggedIn && user?.role === 'admin' ? <AdminSettings /> : <Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />} />

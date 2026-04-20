@@ -2,32 +2,64 @@ const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const Classroom = require('../models/Classroom');
 const fs = require('fs');
 const path = require('path');
 
-// Get all assignments for a teacher
+// Get all assignments for a teacher — scoped to their classrooms
 exports.getTeacherAssignments = async (req, res) => {
     try {
-        const { page = 1, limit = 10, subject, class: className } = req.query;
-        let filter = { createdBy: req.user._id };
+        // Step 1: find all classrooms this teacher is associated with
+        // (either as the lead teacher OR as a course teacher)
+        const classrooms = await Classroom.find({
+            $or: [
+                { teacherId: req.user._id },
+                { 'courses.teacherId': req.user._id }
+            ]
+        }).select('_id name classNumber section');
 
-        if (subject) filter.subject = subject;
-        if (className) filter.class = className;
+        const classroomIds = classrooms.map(c => c._id);
 
-        const skip = (page - 1) * limit;
+        // Step 2: build filter — assignments in those classrooms OR created directly by this teacher
+        const baseFilter = {
+            $or: [
+                { classroomId: { $in: classroomIds } },
+                { createdBy: req.user._id },
+                { teacherId: req.user._id }
+            ]
+        };
 
-        const assignments = await Assignment.find(filter)
+        // Step 3: fetch all matching assignments (no pagination — we need full list for filter chips)
+        const allAssignments = await Assignment.find(baseFilter)
             .populate('createdBy', 'name')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(parseInt(limit));
+            .populate('classroomId', 'name classNumber section')
+            .sort({ createdAt: -1 });
 
-        const total = await Assignment.countDocuments(filter);
+        // Step 4: attach live submission counts
+        const assignmentsWithCounts = await Promise.all(
+            allAssignments.map(async (a) => {
+                const subCount = await Submission.countDocuments({ assignment: a._id });
+                return { ...a.toObject(), submissionCount: subCount };
+            })
+        );
+
+        // Step 5: derive unique subjects and classroom labels for filter chips
+        const subjects = [...new Set(
+            assignmentsWithCounts.map(a => a.subject).filter(Boolean)
+        )].sort();
+
+        const classLabels = [...new Set(
+            assignmentsWithCounts
+                .map(a => a.classroomId?.name)
+                .filter(Boolean)
+        )].sort();
 
         res.json({
-            assignments,
-            total,
-            pages: Math.ceil(total / limit)
+            assignments: assignmentsWithCounts,
+            total: assignmentsWithCounts.length,
+            subjects,
+            classLabels,
+            pages: 1
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -268,9 +300,25 @@ exports.getAssignmentSubmissions = async (req, res) => {
             return res.status(404).json({ message: 'Assignment not found' });
         }
 
-        // Check authorization
-        if (assignment.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-            return res.status(403).json({ message: 'Not authorized to view submissions' });
+        if (req.user.role !== 'admin') {
+            // Check 1: direct creator or assigned teacherId on the assignment doc
+            const isCreator   = assignment.createdBy?.toString() === req.user._id.toString();
+            const isTeacherId = assignment.teacherId?.toString()  === req.user._id.toString();
+
+            // Check 2: teacher is lead OR course teacher in the classroom this assignment belongs to
+            let isClassroomTeacher = false;
+            if (assignment.classroomId) {
+                const classroom = await Classroom.findById(assignment.classroomId);
+                if (classroom) {
+                    isClassroomTeacher =
+                        classroom.teacherId?.toString() === req.user._id.toString() ||
+                        (classroom.courses || []).some(c => c.teacherId?.toString() === req.user._id.toString());
+                }
+            }
+
+            if (!isCreator && !isTeacherId && !isClassroomTeacher) {
+                return res.status(403).json({ message: 'Not authorized to view submissions' });
+            }
         }
 
         const submissions = await Submission.find({ assignment: req.params.assignmentId })
@@ -292,7 +340,18 @@ exports.getAssignmentStats = async (req, res) => {
             return res.status(404).json({ message: 'Assignment not found' });
         }
 
-        if (assignment.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        const isCreator        = assignment.createdBy?.toString() === req.user._id.toString();
+        const isTeacherId      = assignment.teacherId?.toString()  === req.user._id.toString();
+        let   isClassroomTeacher = false;
+        if (assignment.classroomId) {
+            const classroom = await Classroom.findById(assignment.classroomId);
+            if (classroom) {
+                isClassroomTeacher =
+                    classroom.teacherId?.toString() === req.user._id.toString() ||
+                    (classroom.courses || []).some(c => c.teacherId?.toString() === req.user._id.toString());
+            }
+        }
+        if (req.user.role !== 'admin' && !isCreator && !isTeacherId && !isClassroomTeacher) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
@@ -305,7 +364,7 @@ exports.getAssignmentStats = async (req, res) => {
             graded,
             pending: submissions.length - graded,
             lateSubmissions,
-            averageMarks: submissions.length > 0 
+            averageMarks: submissions.length > 0
                 ? (submissions.reduce((acc, s) => acc + (s.marksObtained || 0), 0) / submissions.length).toFixed(2)
                 : 0
         };

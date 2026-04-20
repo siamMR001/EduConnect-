@@ -157,7 +157,7 @@ const Login = () => {
                                     setFormData({ ...formData, email: e.target.value });
                                 }}
                                 className="input-field pl-10"
-                                placeholder={isLoginMode ? (activeTab === 'teacher' ? 'Email or Employee ID' : 'Email or Student ID') : "Email address"}
+                                placeholder={isLoginMode ? (activeTab === 'teacher' ? 'Email or Employee ID' : activeTab === 'admin' ? 'Email or Admin ID' : 'Email or Student ID') : "Email address"}
                             />
                         </div>
 

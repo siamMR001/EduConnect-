@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Users, Clock, Plus, X } from 'lucide-react';
 import { eventAPI, noticeAPI } from '../services/api';
 
@@ -70,6 +70,12 @@ export default function EventCalendar() {
         setUser(userData);
     }, []);
 
+    // Helper function to get just the date part (YYYY-MM-DD) for comparison
+    const getDateOnly = (date) => {
+        const d = new Date(date);
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    };
+
     // Get first day of month (0-6, where 0 is Sunday)
     const getFirstDayOfMonth = (date) => {
         return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
@@ -80,36 +86,36 @@ export default function EventCalendar() {
         return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
     };
 
-    // Get events and notices for a specific date
-    const getItemsForDate = (day) => {
-        // Create a date object for the specific day in current month
-        const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    // Pre-compute items for each day using useMemo (memoized cache)
+    const calendarItemsCache = useMemo(() => {
+        const cache = {};
+        const daysInMonth = getDaysInMonth(currentDate);
         
-        const dayEvents = events.filter(event => {
-            const eventStart = new Date(event.date);
-            const eventEnd = event.endDate ? new Date(event.endDate) : eventStart;
+        // Pre-compute for all days in month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const targetDate = getDateOnly(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
             
-            // Check if targetDate is within the event duration (inclusive)
-            return (
-                targetDate >= eventStart &&
-                targetDate <= eventEnd
-            );
-        });
+            const dayEvents = events.filter(event => {
+                const eventStart = getDateOnly(event.date);
+                const eventEnd = event.endDate ? getDateOnly(event.endDate) : eventStart;
+                return targetDate >= eventStart && targetDate <= eventEnd;
+            });
 
-        const dayNotices = notices.filter(notice => {
-            if (!notice.date) return false;
+            const dayNotices = notices.filter(notice => {
+                if (!notice.date) return false;
+                const noticeStart = getDateOnly(notice.date);
+                const noticeEnd = notice.expiryDate ? getDateOnly(notice.expiryDate) : noticeStart;
+                return targetDate >= noticeStart && targetDate <= noticeEnd;
+            });
             
-            const noticeStart = new Date(notice.date);
-            const noticeEnd = notice.expiryDate ? new Date(notice.expiryDate) : noticeStart;
-            
-            // Check if targetDate is within the notice duration (inclusive)
-            return (
-                targetDate >= noticeStart &&
-                targetDate <= noticeEnd
-            );
-        });
+            cache[day] = { events: dayEvents, notices: dayNotices };
+        }
+        return cache;
+    }, [events, notices, currentDate, getDateOnly]);
 
-        return { events: dayEvents, notices: dayNotices };
+    // Get events and notices for a specific date (now uses cache)
+    const getItemsForDate = (day) => {
+        return calendarItemsCache[day] || { events: [], notices: [] };
     };
 
     // Handle previous month
@@ -193,163 +199,12 @@ export default function EventCalendar() {
         <div className="max-w-7xl mx-auto py-8 px-4">
             {/* Header */}
             <div className="mb-8">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                        <Calendar className="w-8 h-8 text-primary-light" />
-                        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white">Event Calendar</h1>
-                    </div>
-                    {user?.role === 'admin' && (
-                        <button
-                            onClick={() => setShowCreateForm(!showCreateForm)}
-                            className="btn-primary flex items-center gap-2"
-                        >
-                            <Plus className="w-5 h-5" />
-                            New Event
-                        </button>
-                    )}
+                <div className="flex items-center gap-3 mb-6">
+                    <Calendar className="w-8 h-8 text-primary-light" />
+                    <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white">Academic Calendar</h1>
                 </div>
             </div>
 
-            {/* Create Event Form */}
-            {showCreateForm && (
-                <div className="glass-panel p-8 mb-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-white">Create New Event</h2>
-                        <button
-                            onClick={() => setShowCreateForm(false)}
-                            className="text-slate-400 hover:text-white"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleCreateEvent} className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-200 mb-2">Event Title</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.title}
-                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="input-field"
-                                placeholder="Enter event title"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-200 mb-2">Description</label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                className="input-field h-24"
-                                placeholder="Event description"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Start Date</label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={formData.date}
-                                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                    className="input-field"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">End Date</label>
-                                <input
-                                    type="date"
-                                    value={formData.endDate}
-                                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                    className="input-field"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Time (HH:MM)</label>
-                                <input
-                                    type="time"
-                                    value={formData.time}
-                                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                                    className="input-field"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Location</label>
-                                <input
-                                    type="text"
-                                    value={formData.location}
-                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    className="input-field"
-                                    placeholder="Event location"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Category</label>
-                                <select
-                                    value={formData.category}
-                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    className="input-field"
-                                >
-                                    {categories.map(cat => (
-                                        <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Target Role</label>
-                                <select
-                                    value={formData.targetRole}
-                                    onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
-                                    className="input-field"
-                                >
-                                    {targetRoles.map(role => (
-                                        <option key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-200 mb-2">Capacity (Optional)</label>
-                            <input
-                                type="number"
-                                value={formData.capacity}
-                                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                                className="input-field"
-                                placeholder="Maximum participants"
-                                min="1"
-                            />
-                        </div>
-
-                        <div className="flex gap-4 justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setShowCreateForm(false)}
-                                className="btn-secondary"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                className="btn-primary"
-                            >
-                                Create Event
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Calendar */}

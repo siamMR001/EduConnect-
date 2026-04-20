@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api, { baseUrl } from '../services/api';
 import { 
   MessageSquare, FileText, CheckCircle, Clock, Send, Paperclip, 
@@ -9,7 +9,13 @@ import {
 
 export default function ClassroomView() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Feed');
+  // Submit assignment modal
+  const [submitModal, setSubmitModal] = useState(null); // null | { assignmentId, title }
+  const [submitFiles, setSubmitFiles] = useState([]);
+  const [submitText, setSubmitText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [classroom, setClassroom] = useState(null);
   const [user, setUser] = useState(null);
   
@@ -213,6 +219,32 @@ export default function ClassroomView() {
     } catch (err) { alert(err.response?.data?.message || 'Error'); }
   };
 
+  // Rich submission: files + text via the proper /submissions route
+  const handleSubmitFull = async (e) => {
+    e.preventDefault();
+    if (!submitFiles.length && !submitText.trim()) {
+      alert('Please attach a file or enter submission text.');
+      return;
+    }
+    const formData = new FormData();
+    submitFiles.forEach(f => formData.append('submittedFiles', f));
+    if (submitText.trim()) formData.append('submissionText', submitText.trim());
+    try {
+      setSubmitting(true);
+      await api.post(`/submissions/${submitModal.assignmentId}/submit`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setSubmitModal(null);
+      setSubmitFiles([]);
+      setSubmitText('');
+      fetchAssignments();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Submission failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // --- Results Logic ---
   const fetchResults = async () => {
     const res = await api.get(`/classrooms/${id}/results`);
@@ -314,7 +346,9 @@ export default function ClassroomView() {
       </div>
 
       <div className="flex border-b border-white/10 space-x-8 mb-6 overflow-x-auto">
-        {['Feed', 'Routine', 'Attendance', 'Subjects', 'Assignments', 'Results', 'Members'].map(tab => (
+        {['Feed', 'Routine', 'Attendance', 'Subjects', 'Assignments', 'Results', 'Members']
+          .filter(tab => !(tab === 'Assignments' && user?.role === 'admin'))
+          .map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -418,21 +452,27 @@ export default function ClassroomView() {
       )}
 
       {/* ASSIGNMENTS TAB */}
-      {activeTab === 'Assignments' && (
+      {activeTab === 'Assignments' && user?.role !== 'admin' && (
         <div className="space-y-6">
-          {user?.role === 'teacher' && classroom.teacherId?._id === user._id && (
-            <form onSubmit={handleCreateAssign} className="glass-panel p-6 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4">
-              <h3 className="col-span-full text-lg font-bold text-white mb-2">Create New Assignment</h3>
-              <input type="text" placeholder="Title" required value={assignForm.title} onChange={e => setAssignForm({...assignForm, title: e.target.value})} className="input-field col-span-full bg-black/40" />
-              <textarea placeholder="Description" required value={assignForm.description} onChange={e => setAssignForm({...assignForm, description: e.target.value})} className="input-field col-span-full h-24 bg-black/40" />
-              <input type="text" placeholder="Subject" required value={assignForm.subject} onChange={e => setAssignForm({...assignForm, subject: e.target.value})} className="input-field bg-black/40" />
-              <input type="datetime-local" placeholder="Due Date" required value={assignForm.dueDate} onChange={e => setAssignForm({...assignForm, dueDate: e.target.value})} className="input-field bg-black/40" />
-              <input type="number" placeholder="Total Marks" required value={assignForm.totalMarks} onChange={e => setAssignForm({...assignForm, totalMarks: e.target.value})} className="input-field bg-black/40" />
-              <input type="text" placeholder="Attachment URL" value={assignForm.attachmentUrl} onChange={e => setAssignForm({...assignForm, attachmentUrl: e.target.value})} className="input-field bg-black/40" />
-              <button type="submit" className="col-span-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white font-medium hover:from-blue-500 hover:to-indigo-500 transition-colors">
-                Publish Assignment
-              </button>
-            </form>
+          {user?.role === 'teacher' && (
+            (() => {
+              const isLeadTeacher = classroom.teacherId?._id === user._id;
+              const isCourseTeacher = classroom.courses?.some(c => c.teacherId?._id === user._id);
+              return (isLeadTeacher || isCourseTeacher) ? (
+                <form onSubmit={handleCreateAssign} className="glass-panel p-6 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <h3 className="col-span-full text-lg font-bold text-white mb-2">Create New Assignment</h3>
+                  <input type="text" placeholder="Title" required value={assignForm.title} onChange={e => setAssignForm({...assignForm, title: e.target.value})} className="input-field col-span-full bg-black/40" />
+                  <textarea placeholder="Description" required value={assignForm.description} onChange={e => setAssignForm({...assignForm, description: e.target.value})} className="input-field col-span-full h-24 bg-black/40" />
+                  <input type="text" placeholder="Subject" required value={assignForm.subject} onChange={e => setAssignForm({...assignForm, subject: e.target.value})} className="input-field bg-black/40" />
+                  <input type="datetime-local" placeholder="Due Date" required value={assignForm.dueDate} onChange={e => setAssignForm({...assignForm, dueDate: e.target.value})} className="input-field bg-black/40" />
+                  <input type="number" placeholder="Total Marks" required value={assignForm.totalMarks} onChange={e => setAssignForm({...assignForm, totalMarks: e.target.value})} className="input-field bg-black/40" />
+                  <input type="text" placeholder="Attachment URL" value={assignForm.attachmentUrl} onChange={e => setAssignForm({...assignForm, attachmentUrl: e.target.value})} className="input-field bg-black/40" />
+                  <button type="submit" className="col-span-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white font-medium hover:from-blue-500 hover:to-indigo-500 transition-colors">
+                    Publish Assignment
+                  </button>
+                </form>
+              ) : null;
+            })()
           )}
 
           <div className="space-y-4">
@@ -470,16 +510,14 @@ export default function ClassroomView() {
                   )}
 
                   {user?.role === 'student' && !a.userSubmission && !isLateNodeCronSimulation && (
-                    <form 
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSubmitAssign(a._id, e.target.fileUrl.value);
-                      }}
-                      className="mt-4 pt-4 border-t border-white/10 flex gap-3"
-                    >
-                      <input name="fileUrl" type="url" placeholder="Paste your submission link/URL here..." required className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 text-white p-2 text-sm outline-none focus:border-blue-500" />
-                      <button type="submit" className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium text-sm transition-colors">Turn In</button>
-                    </form>
+                    <div className="mt-4 pt-4 border-t border-white/10">
+                      <button
+                        onClick={() => setSubmitModal({ assignmentId: a._id, title: a.title })}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0"
+                      >
+                        <Upload className="w-4 h-4" /> Submit Assignment
+                      </button>
+                    </div>
                   )}
                   {user?.role === 'teacher' && (
                     <div className="mt-4 pt-4 border-t border-white/10">
@@ -490,7 +528,7 @@ export default function ClassroomView() {
                             <div key={sub._id} className="flex justify-between items-center p-2 bg-black/30 rounded">
                               <span className="text-white">{sub.student?.name}</span>
                               <div className="flex items-center gap-4">
-                                <a href={sub.fileUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">View Work</a>
+                                <button onClick={() => navigate(`/teacher-assignments?assignmentId=${a._id}`)} className="text-blue-400 hover:underline bg-transparent border-none cursor-pointer text-sm">View Work</button>
                                 <span className={`px-2 py-0.5 rounded text-xs ${sub.status === 'late' || sub.isLate ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
                                   {sub.status.toUpperCase()}
                                 </span>
@@ -1317,6 +1355,90 @@ Results are uploaded successfully. Use the <Link to="/gradesheet" className="tex
                  </table>
               </div>
            </div>
+        </div>
+      )}
+      {/* ── Submit Assignment Modal ── */}
+      {submitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-[#0d0d1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-down">
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-white/10 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-blue-400">Submit Assignment: {submitModal.title}</h2>
+              </div>
+              <button onClick={() => { setSubmitModal(null); setSubmitFiles([]); setSubmitText(''); }}
+                className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitFull} className="p-6 space-y-5">
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">Upload Files <span className="text-slate-500">(Optional)</span></label>
+                <label className="flex items-center gap-3 w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors group">
+                  <span className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors shrink-0">
+                    Browse...
+                  </span>
+                  <span className="text-slate-400 text-sm truncate">
+                    {submitFiles.length === 0 ? 'No files selected.' : submitFiles.map(f => f.name).join(', ')}
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp"
+                    className="hidden"
+                    onChange={e => setSubmitFiles(Array.from(e.target.files))}
+                  />
+                </label>
+                <p className="text-xs text-slate-500 mt-1.5">Supported: PDF, Images, Word documents (Max 10MB each)</p>
+                {/* File chips */}
+                {submitFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {submitFiles.map((f, i) => (
+                      <span key={i} className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-lg text-xs">
+                        <Paperclip className="w-3 h-3" /> {f.name}
+                        <button type="button" onClick={() => setSubmitFiles(submitFiles.filter((_, j) => j !== i))}
+                          className="ml-1 text-slate-400 hover:text-red-400 transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Submission Text */}
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">Submission Text <span className="text-slate-500">(Optional)</span></label>
+                <textarea
+                  value={submitText}
+                  onChange={e => setSubmitText(e.target.value)}
+                  rows={4}
+                  placeholder="Enter your submission text here..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-slate-200 placeholder:text-slate-600 text-sm outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 transition-all resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                >
+                  {submitting ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting...</> : 'Submit Assignment'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSubmitModal(null); setSubmitFiles([]); setSubmitText(''); }}
+                  className="px-6 py-2.5 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-300 font-semibold rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

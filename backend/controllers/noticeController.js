@@ -37,12 +37,24 @@ exports.getNoticesForMonth = async (req, res) => {
         
         // Create start and end dates for the month
         const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
+        
+        // Include notices from previous month that might extend into current month
+        const extendedStartDate = new Date(startDate);
+        extendedStartDate.setDate(extendedStartDate.getDate() - 31);
 
         const notices = await Notice.find({
             isActive: true,
-            date: { $gte: startDate, $lt: endDate }
-        }).populate('author', 'name role').sort({ date: 1 });
+            $or: [
+                { date: { $gte: startDate, $lte: endDate } },  // starts in month
+                { expiryDate: { $gte: startDate, $lte: endDate } },  // expires in month
+                { date: { $lt: startDate }, expiryDate: { $gt: endDate } }  // spans entire month
+            ]
+        })
+            .select('title date expiryDate category priority content author')
+            .populate('author', 'name')
+            .sort({ date: -1 })
+            .lean();  // lean() returns plain JS objects, much faster
 
         res.json(notices);
     } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Bell, Plus, X, FileDown, AlertCircle, Eye } from 'lucide-react';
 import { noticeAPI } from '../services/api';
 
@@ -70,6 +70,20 @@ export default function NoticeBoard() {
 
         setFilteredNotices(filtered);
     };
+
+    // Memoized filtered notices to avoid re-filtering on every render
+    const memoizedFilteredNotices = useMemo(() => {
+        let filtered = notices;
+
+        if (filters.search) {
+            filtered = filtered.filter(notice =>
+                notice.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+                notice.content.toLowerCase().includes(filters.search.toLowerCase())
+            );
+        }
+
+        return filtered;
+    }, [notices, filters.search]);
 
     useEffect(() => {
         fetchNotices();
@@ -361,7 +375,7 @@ export default function NoticeBoard() {
                                 <p className="text-slate-400 text-lg">No notices found</p>
                             </div>
                         ) : (
-                            filteredNotices.map(notice => (
+                            memoizedFilteredNotices.map(notice => (
                                 <div
                                     key={notice._id}
                                     className="glass-panel p-6 hover:border-primary-light/50 transition cursor-pointer"

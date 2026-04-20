@@ -5,7 +5,7 @@ const User = require('../models/User');
 // Get all events
 exports.getAllEvents = async (req, res) => {
     try {
-        const { month, year, category, targetRole } = req.query;
+        const { month, year, category, targetRole, page = 1, limit = 50 } = req.query;
         let filter = {};
 
         if (month && year) {
@@ -17,10 +17,15 @@ exports.getAllEvents = async (req, res) => {
         if (category) filter.category = category;
         if (targetRole) filter.targetRole = targetRole;
 
+        const skip = (page - 1) * limit;
+
         const events = await Event.find(filter)
+            .select('title date endDate category location organizer time capacity')
             .populate('organizer', 'name role')
-            .populate('registeredUsers', 'name email')
-            .sort({ date: 1 });
+            .sort({ date: 1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .lean();
 
         res.json(events);
     } catch (error) {
@@ -208,13 +213,23 @@ exports.getEventsForMonth = async (req, res) => {
     try {
         const { month, year } = req.params;
         const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
+        
+        // Include events from previous month that might extend into current month
+        const extendedStartDate = new Date(startDate);
+        extendedStartDate.setDate(extendedStartDate.getDate() - 31);
 
         const events = await Event.find({
-            date: { $gte: startDate, $lte: endDate }
+            $or: [
+                { date: { $gte: startDate, $lte: endDate } },  // starts in month
+                { endDate: { $gte: startDate, $lte: endDate } },  // ends in month
+                { date: { $lt: startDate }, endDate: { $gt: endDate } }  // spans entire month
+            ]
         })
-            .populate('organizer', 'name role')
-            .sort({ date: 1 });
+            .select('title date endDate category location organizer time capacity')
+            .populate('organizer', 'name')
+            .sort({ date: 1 })
+            .lean();  // lean() returns plain JS objects, much faster
 
         res.json(events);
     } catch (error) {

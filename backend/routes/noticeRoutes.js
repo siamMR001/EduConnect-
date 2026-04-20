@@ -34,11 +34,11 @@ const upload = multer({
     }
 });
 
-// Routes
-router.get('/', noticeController.getAllNotices);
+// Routes - Order matters! More specific routes must come before generic :id routes
 router.get('/month/:month/:year', noticeController.getNoticesForMonth);
-router.get('/:id', noticeController.getNoticeById);
 router.get('/category/:category', noticeController.getNoticesByCategory);
+router.get('/', noticeController.getAllNotices);
+router.get('/:id', noticeController.getNoticeById);
 
 router.post('/', protect, authorize('admin'), upload.array('attachments', 5), noticeController.createNotice);
 router.put('/:id', protect, authorize('admin'), upload.array('attachments', 5), noticeController.updateNotice);

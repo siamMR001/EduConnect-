@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Calendar, Bell, Plus, AlertCircle, ChevronRight, Settings, Users, FileText, CheckCircle, XCircle, Trash2, Pencil, X } from 'lucide-react';
+import { noticeAPI } from '../services/api';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -18,8 +19,11 @@ const Dashboard = () => {
     const [showEventModal, setShowEventModal] = useState(false);
 
     // Form state
-    const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal', targetRole: 'all' });
-    const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', type: 'academic', link: '' });
+    const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal', targetRole: 'all', date: '' });
+    const [newEvent, setNewEvent] = useState({
+        title: '', description: '', date: '', endDate: '', time: '',
+        location: '', category: 'academic', targetRole: 'all', capacity: ''
+    });
 
     // Edit state
     const [editingNotice, setEditingNotice] = useState(null);
@@ -143,27 +147,28 @@ const Dashboard = () => {
     const handleAddNotice = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notices`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({ ...newNotice, author: user._id })
-            });
-            if (res.ok) {
-                const responseData = await res.json();
+            // Convert date string to Date object for API
+            const noticeData = {
+                title: newNotice.title,
+                content: newNotice.content,
+                priority: newNotice.priority,
+                targetRole: newNotice.targetRole,
+                category: newNotice.category || 'announcement',
+                date: newNotice.date ? new Date(newNotice.date).toISOString() : null
+            };
+            
+            const response = await noticeAPI.createNotice(noticeData, null);
+            if (response.status === 201 || response.status === 200) {
+                const responseData = response.data;
                 setNotices([responseData.notice, ...notices]);
                 setShowNoticeModal(false);
-                setNewNotice({ title: '', content: '', priority: 'normal', targetRole: 'all' });
+                setNewNotice({ title: '', content: '', priority: 'normal', targetRole: 'all', date: '' });
             } else {
-                const errData = await res.json();
-                alert(`Failed to create notice: ${errData.message} ${errData.error || ''}`);
-                console.error("Notice creation error details:", errData);
+                alert(`Failed to create notice: ${response.data.message || 'Unknown error'}`);
             }
         } catch (err) {
-            console.error("Fetch error:", err);
-            alert("Network error: Could not reach the server to post notice.");
+            console.error("Error creating notice:", err);
+            alert(`Network error: ${err.message || 'Could not reach the server'}`);
         }
     };
 
@@ -238,14 +243,17 @@ const Dashboard = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({ ...newEvent, organizer: user._id })
+                body: JSON.stringify({
+                    ...newEvent,
+                    capacity: newEvent.capacity ? parseInt(newEvent.capacity) : null,
+                    organizer: user._id
+                })
             });
             if (res.ok) {
                 const responseData = await res.json();
-                // Sort events by date ascending
                 setEvents([...events, responseData.event].sort((a, b) => new Date(a.date) - new Date(b.date)));
                 setShowEventModal(false);
-                setNewEvent({ title: '', description: '', date: '', type: 'academic', link: '' });
+                setNewEvent({ title: '', description: '', date: '', endDate: '', time: '', location: '', category: 'academic', targetRole: 'all', capacity: '' });
             } else {
                 alert("Failed to create event.");
             }
@@ -331,38 +339,13 @@ const Dashboard = () => {
                         </p>
                     </div>
                     {user.role?.toLowerCase() === 'admin' && (
-                        <button onClick={() => setIsSettingsOpen(true)} className="p-2 ml-2 bg-white/5 hover:bg-white/10 flex items-center gap-2 rounded-lg text-slate-400 hover:text-white transition-all border border-white/5">
+                        <button onClick={() => navigate('/admin/settings')} className="p-2 ml-2 bg-white/5 hover:bg-white/10 flex items-center gap-2 rounded-lg text-slate-400 hover:text-white transition-all border border-white/5">
                             <Settings size={20} />
                             <span className="text-sm font-medium hidden md:block">Fee Config</span>
                         </button>
                     )}
                 </div>
             </header>
-
-            {isSettingsOpen && (
-                <div className="mb-8 glass-panel p-6 border-l-4 border-primary animate-fade-in-down flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                            <Settings size={20} className="text-primary-light" />
-                            Admission Fee Configuration
-                        </h3>
-                        <p className="text-sm text-slate-400">Set the payment amount required before a student application is submitted.</p>
-                    </div>
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                        <div className="flex items-center glass-panel px-4 py-2 border-white/10 bg-black/20">
-                            <span className="text-slate-400 mr-2 text-lg">৳</span>
-                            <input
-                                type="number"
-                                className="bg-transparent border-none text-white font-bold w-20 text-lg focus:ring-0 focus:outline-none p-0"
-                                value={admissionFee}
-                                onChange={(e) => setAdmissionFee(e.target.value)}
-                            />
-                        </div>
-                        <button onClick={handleSaveSettings} className="btn-primary py-2 px-6 shrink-0">Save</button>
-                        <button onClick={() => setIsSettingsOpen(false)} className="btn-secondary py-2 px-4 shrink-0">Cancel</button>
-                    </div>
-                </div>
-            )}
 
 
 
@@ -405,46 +388,69 @@ const Dashboard = () => {
                             )}
                         </div>
 
-                        <div className="grid gap-4">
-                            {notices.map((notice) => (
-                                <div key={notice._id || notice.id} className="glass-panel p-5 border-l-4 border-l-primary hover:border-l-primary-light transition-all duration-300 transform hover:-translate-y-1 relative group">
-                                    {user.role === 'admin' && (
-                                        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                            <button onClick={(e) => { e.stopPropagation(); setEditingNotice({ ...notice }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
-                                                <Pencil size={14} />
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice._id || notice.id); }}
-                                                className={`p-1.5 rounded-lg transition-all text-sm font-bold flex items-center gap-1 ${confirmDeleteNoticeId === (notice._id || notice.id)
-                                                    ? 'bg-red-500 text-white px-2'
-                                                    : 'bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400'
-                                                    }`}
-                                            >
-                                                {confirmDeleteNoticeId === (notice._id || notice.id) ? 'Sure?' : <Trash2 size={14} />}
-                                            </button>
-                                        </div>
+                        {/* Notices — scrollable, max 6-7 visible, expired filtered out */}
+                        {(() => {
+                            const now = new Date();
+                            const activeNotices = notices.filter(n => {
+                                if (!n.date && !n.expiryDate) return true;        // no date set — always show
+                                const expiry = n.expiryDate ? new Date(n.expiryDate) : (n.date ? new Date(n.date) : null);
+                                return !expiry || expiry >= now;                   // hide if expired
+                            });
+                            return (
+                                <div className="relative">
+                                    <div
+                                        className="grid gap-4 scroll-panel pr-1"
+                                        style={{ maxHeight: '560px' }}
+                                    >
+                                        {activeNotices.length === 0 && (
+                                            <div className="text-center py-12 text-slate-600 italic text-sm">No active notices.</div>
+                                        )}
+                                        {activeNotices.map((notice) => (
+                                            <div key={notice._id || notice.id} className="glass-panel p-5 border-l-4 border-l-primary hover:border-l-primary-light transition-all duration-300 transform hover:-translate-y-1 relative group">
+                                                {user.role === 'admin' && (
+                                                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                        <button onClick={(e) => { e.stopPropagation(); setEditingNotice({ ...notice }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
+                                                            <Pencil size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteNotice(notice._id || notice.id); }}
+                                                            className={`p-1.5 rounded-lg transition-all text-sm font-bold flex items-center gap-1 ${confirmDeleteNoticeId === (notice._id || notice.id)
+                                                                ? 'bg-red-500 text-white px-2'
+                                                                : 'bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400'
+                                                                }`}
+                                                        >
+                                                            {confirmDeleteNoticeId === (notice._id || notice.id) ? 'Sure?' : <Trash2 size={14} />}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                                        {notice.priority === 'urgent' && <AlertCircle size={16} className="text-red-400 animate-pulse" />}
+                                                        {notice.title}
+                                                    </h3>
+                                                    <span className="text-xs text-slate-400 bg-black/20 px-2 py-1 rounded shrink-0">
+                                                        {new Date(notice.createdAt).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <p className="text-slate-300 text-sm mb-4 leading-relaxed">{notice.content}</p>
+                                                <div className="flex justify-between items-center text-xs text-slate-500">
+                                                    <span className="capitalize px-2 py-1 bg-white/5 rounded-full border border-white/5">
+                                                        For: {notice.targetRole === 'all' ? 'Everyone' : notice.targetRole.replace('_', '/')}
+                                                    </span>
+                                                    <button onClick={() => setReadingNotice(notice)} className="text-primary hover:text-primary-light flex items-center gap-1 group font-medium transition-colors">
+                                                        Read more <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {/* Fade-out hint when scrollable */}
+                                    {activeNotices.length > 6 && (
+                                        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background-dark/80 to-transparent rounded-b-xl" />
                                     )}
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                            {notice.priority === 'urgent' && <AlertCircle size={16} className="text-red-400 animate-pulse" />}
-                                            {notice.title}
-                                        </h3>
-                                        <span className="text-xs text-slate-400 bg-black/20 px-2 py-1 rounded">
-                                            {new Date(notice.createdAt).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <p className="text-slate-300 text-sm mb-4 leading-relaxed">{notice.content}</p>
-                                    <div className="flex justify-between items-center text-xs text-slate-500">
-                                        <span className="capitalize px-2 py-1 bg-white/5 rounded-full border border-white/5">
-                                            For: {notice.targetRole === 'all' ? 'Everyone' : notice.targetRole.replace('_', '/')}
-                                        </span>
-                                        <button onClick={() => setReadingNotice(notice)} className="text-primary hover:text-primary-light flex items-center gap-1 group font-medium transition-colors">
-                                            Read more <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                        </button>
-                                    </div>
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })()}
                     </div>
 
                     {/* Calendar / Events */}
@@ -464,52 +470,68 @@ const Dashboard = () => {
                             )}
                         </div>
 
-                        <div className="glass-panel p-5 h-full min-h-[400px]">
-                            <div className="space-y-5">
-                                {events.map((evt) => (
-                                    <div key={evt._id || evt.id} className="group flex gap-4 items-start p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 cursor-pointer relative">
-                                        {user.role === 'admin' && (
-                                            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                                <button onClick={(e) => { e.stopPropagation(); setEditingEvent({ ...evt, date: new Date(evt.date).toISOString().slice(0, 16) }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
-                                                    <Pencil size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteEvent(evt._id || evt.id); }}
-                                                    className={`p-1.5 rounded-lg transition-all text-sm font-bold flex items-center gap-1 ${confirmDeleteEventId === (evt._id || evt.id)
-                                                        ? 'bg-red-500 text-white px-2'
-                                                        : 'bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400'
-                                                        }`}
-                                                >
-                                                    {confirmDeleteEventId === (evt._id || evt.id) ? 'Sure?' : <Trash2 size={14} />}
-                                                </button>
-                                            </div>
+                        {/* Events — scrollable, max 6-7 visible, past events filtered out */}
+                        {(() => {
+                            const now = new Date();
+                            const upcomingEvents = events.filter(e => {
+                                const evtDate = e.endDate ? new Date(e.endDate) : new Date(e.date);
+                                return evtDate >= now;   // hide if end date (or start date) has passed
+                            });
+                            return (
+                                <div className="glass-panel p-5">
+                                    <div
+                                        className="space-y-5 scroll-panel pr-1 relative"
+                                        style={{ maxHeight: '520px' }}
+                                    >
+                                        {upcomingEvents.length === 0 && (
+                                            <div className="text-center py-12 text-slate-600 italic text-sm">No upcoming events.</div>
                                         )}
-                                        <div className="flex flex-col items-center justify-center min-w-[50px] bg-black/20 rounded-lg p-2 border border-white/5 group-hover:bg-primary/20 group-hover:border-primary/30 transition-colors">
-                                            <span className="text-xs text-primary-light font-bold uppercase tracking-wider">
-                                                {new Date(evt.date).toLocaleString('default', { month: 'short' })}
-                                            </span>
-                                            <span className="text-xl text-white font-bold leading-none mt-1">
-                                                {new Date(evt.date).getDate()}
-                                            </span>
-                                            <span className="text-[9px] text-slate-400 mt-1.5 font-medium tracking-wider">
-                                                {new Date(evt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="mb-1">
-                                                <h4 className="text-white font-medium group-hover:text-primary-light transition-colors">{evt.title}</h4>
+                                        {upcomingEvents.map((evt) => (
+                                            <div key={evt._id || evt.id} className="group flex gap-4 items-start p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 cursor-pointer relative">
+                                                {user.role === 'admin' && (
+                                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                        <button onClick={(e) => { e.stopPropagation(); setEditingEvent({ ...evt, date: new Date(evt.date).toISOString().slice(0, 16) }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
+                                                            <Pencil size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteEvent(evt._id || evt.id); }}
+                                                            className={`p-1.5 rounded-lg transition-all text-sm font-bold flex items-center gap-1 ${confirmDeleteEventId === (evt._id || evt.id)
+                                                                ? 'bg-red-500 text-white px-2'
+                                                                : 'bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400'
+                                                                }`}
+                                                        >
+                                                            {confirmDeleteEventId === (evt._id || evt.id) ? 'Sure?' : <Trash2 size={14} />}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-col items-center justify-center min-w-[50px] bg-black/20 rounded-lg p-2 border border-white/5 group-hover:bg-primary/20 group-hover:border-primary/30 transition-colors">
+                                                    <span className="text-xs text-primary-light font-bold uppercase tracking-wider">
+                                                        {new Date(evt.date).toLocaleString('default', { month: 'short' })}
+                                                    </span>
+                                                    <span className="text-xl text-white font-bold leading-none mt-1">
+                                                        {new Date(evt.date).getDate()}
+                                                    </span>
+                                                    <span className="text-[9px] text-slate-400 mt-1.5 font-medium tracking-wider">
+                                                        {new Date(evt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="mb-1">
+                                                        <h4 className="text-white font-medium group-hover:text-primary-light transition-colors">{evt.title}</h4>
+                                                    </div>
+                                                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{evt.description}</p>
+                                                    {evt.link && (
+                                                        <a href={evt.link.startsWith('http') ? evt.link : `https://${evt.link}`} target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors" onClick={e => e.stopPropagation()}>
+                                                            🖇️ View Link
+                                                        </a>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{evt.description}</p>
-                                            {evt.link && (
-                                                <a href={evt.link.startsWith('http') ? evt.link : `https://${evt.link}`} target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors" onClick={e => e.stopPropagation()}>
-                                                    🖇️ View Link
-                                                </a>
-                                            )}
-                                        </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
             )}
@@ -703,7 +725,7 @@ const Dashboard = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-slate-400 text-sm font-semibold mb-2">Priority</label>
-                                    <select value={newNotice.priority} onChange={e => setNewNotice({ ...newNotice, priority: e.target.value })} className="form-input w-full text-white bg-background-dark">
+                                    <select value={newNotice.priority} onChange={e => setNewNotice({ ...newNotice, priority: e.target.value })} className="input-field">
                                         <option value="normal">Normal</option>
                                         <option value="high">High</option>
                                         <option value="urgent">Urgent</option>
@@ -711,12 +733,16 @@ const Dashboard = () => {
                                 </div>
                                 <div>
                                     <label className="block text-slate-400 text-sm font-semibold mb-2">Target Audience</label>
-                                    <select value={newNotice.targetRole} onChange={e => setNewNotice({ ...newNotice, targetRole: e.target.value })} className="form-input w-full text-white bg-background-dark">
+                                    <select value={newNotice.targetRole} onChange={e => setNewNotice({ ...newNotice, targetRole: e.target.value })} className="input-field">
                                         <option value="all">Everyone</option>
                                         <option value="teacher">Teachers</option>
                                         <option value="student">Student</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-slate-400 text-sm font-semibold mb-2">Notice Date (Optional)</label>
+                                <input type="date" value={newNotice.date} onChange={e => setNewNotice({ ...newNotice, date: e.target.value })} className="form-input w-full" />
                             </div>
                             <div className="flex justify-end gap-4 mt-8 pt-4 border-t border-white/10">
                                 <button type="button" onClick={() => setShowNoticeModal(false)} className="btn-secondary py-2 px-6">Cancel</button>
@@ -727,43 +753,69 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {/* Add Event Modal */}
+            {/* Add Event Modal — full calendar-style form */}
             {showEventModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-                    <div className="glass-panel w-full max-w-lg p-6 relative animate-fade-in-down">
+                    <div className="glass-panel w-full max-w-2xl p-6 relative animate-fade-in-down max-h-[90vh] overflow-y-auto">
+                        <button onClick={() => setShowEventModal(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
+                            <X size={20} />
+                        </button>
                         <h2 className="text-2xl font-bold text-white mb-6">Create New Event</h2>
                         <form onSubmit={handleAddEvent} className="space-y-4">
                             <div>
                                 <label className="block text-slate-400 text-sm font-semibold mb-2">Event Title</label>
-                                <input type="text" required value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} className="form-input w-full" placeholder="e.g. Science Fair" />
+                                <input type="text" required value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} className="form-input w-full" placeholder="e.g. Annual Sports Day" />
                             </div>
                             <div>
                                 <label className="block text-slate-400 text-sm font-semibold mb-2">Description</label>
-                                <textarea required value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} className="form-input w-full h-24" placeholder="Event details..."></textarea>
+                                <textarea value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} className="form-input w-full h-24" placeholder="Event details..."></textarea>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Event Date</label>
-                                    <input type="datetime-local" required value={newEvent.date} onChange={e => setNewEvent({ ...newEvent, date: e.target.value })} className="form-input w-full" />
+                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Start Date</label>
+                                    <input type="date" required value={newEvent.date} onChange={e => setNewEvent({ ...newEvent, date: e.target.value })} className="form-input w-full" />
                                 </div>
                                 <div>
-                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Event Type</label>
-                                    <select value={newEvent.type} onChange={e => setNewEvent({ ...newEvent, type: e.target.value })} className="form-input w-full text-white bg-background-dark">
-                                        <option value="academic">Academic</option>
-                                        <option value="sports">Sports</option>
-                                        <option value="club">Club</option>
-                                        <option value="holiday">Holiday</option>
-                                        <option value="other">Other</option>
+                                    <label className="block text-slate-400 text-sm font-semibold mb-2">End Date</label>
+                                    <input type="date" value={newEvent.endDate} onChange={e => setNewEvent({ ...newEvent, endDate: e.target.value })} className="form-input w-full" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Time (HH:MM)</label>
+                                    <input type="time" value={newEvent.time} onChange={e => setNewEvent({ ...newEvent, time: e.target.value })} className="form-input w-full" />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Location</label>
+                                    <input type="text" value={newEvent.location} onChange={e => setNewEvent({ ...newEvent, location: e.target.value })} className="form-input w-full" placeholder="Venue or location" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Category</label>
+                                    <select value={newEvent.category} onChange={e => setNewEvent({ ...newEvent, category: e.target.value })} className="input-field">
+                                        {['academic','sports','club','holiday','cultural','other'].map(c => (
+                                            <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Target Audience</label>
+                                    <select value={newEvent.targetRole} onChange={e => setNewEvent({ ...newEvent, targetRole: e.target.value })} className="input-field">
+                                        <option value="all">Everyone</option>
+                                        <option value="teacher">Teachers</option>
+                                        <option value="student">Students</option>
+                                        <option value="admin">Admin</option>
                                     </select>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-slate-400 text-sm font-semibold mb-2">Event Link (Optional)</label>
-                                <input type="url" placeholder="https://meet.google.com/..." value={newEvent.link} onChange={e => setNewEvent({ ...newEvent, link: e.target.value })} className="form-input w-full" />
+                                <label className="block text-slate-400 text-sm font-semibold mb-2">Capacity (Optional)</label>
+                                <input type="number" min="1" value={newEvent.capacity} onChange={e => setNewEvent({ ...newEvent, capacity: e.target.value })} className="form-input w-full" placeholder="Maximum participants" />
                             </div>
-                            <div className="flex justify-end gap-4 mt-8 pt-4 border-t border-white/10">
+                            <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-white/10">
                                 <button type="button" onClick={() => setShowEventModal(false)} className="btn-secondary py-2 px-6">Cancel</button>
-                                <button type="submit" className="btn-primary py-2 px-6">Add Event</button>
+                                <button type="submit" className="btn-primary py-2 px-6">Create Event</button>
                             </div>
                         </form>
                     </div>
@@ -816,7 +868,7 @@ const Dashboard = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-slate-400 text-sm font-semibold mb-2">Priority</label>
-                                    <select value={editingNotice.priority} onChange={e => setEditingNotice({ ...editingNotice, priority: e.target.value })} className="form-input w-full text-white bg-background-dark">
+                                    <select value={editingNotice.priority} onChange={e => setEditingNotice({ ...editingNotice, priority: e.target.value })} className="input-field">
                                         <option value="normal">Normal</option>
                                         <option value="high">High</option>
                                         <option value="urgent">Urgent</option>
@@ -824,7 +876,7 @@ const Dashboard = () => {
                                 </div>
                                 <div>
                                     <label className="block text-slate-400 text-sm font-semibold mb-2">Target Audience</label>
-                                    <select value={editingNotice.targetRole} onChange={e => setEditingNotice({ ...editingNotice, targetRole: e.target.value })} className="form-input w-full text-white bg-background-dark">
+                                    <select value={editingNotice.targetRole} onChange={e => setEditingNotice({ ...editingNotice, targetRole: e.target.value })} className="input-field">
                                         <option value="all">Everyone</option>
                                         <option value="teacher">Teachers</option>
                                         <option value="student">Student</option>

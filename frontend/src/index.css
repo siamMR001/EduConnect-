@@ -48,6 +48,28 @@
   .input-field {
     @apply w-full px-4 py-2 bg-black/20 border border-white/10 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all duration-300 placeholder:text-slate-500;
   }
+
+  /* Select Fields Enhancement */
+  select.input-field {
+    @apply appearance-none cursor-pointer bg-black/40 hover:bg-black/50 hover:border-white/20;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem;
+  }
+
+  select.input-field option {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    padding: 8px 4px;
+  }
+
+  select.input-field option:checked {
+    background: linear-gradient(#3b82f6, #3b82f6);
+    background-color: #3b82f6;
+    color: white;
+  }
 }
 
 /* Custom Scrollbar */
@@ -61,4 +83,24 @@
 
 ::-webkit-scrollbar-thumb {
   @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+}
+
+/* Slim in-panel scrollbar for notice/event lists */
+.scroll-panel {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+.scroll-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.scroll-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-panel::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 9999px;
+}
+.scroll-panel:hover::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22);
 }

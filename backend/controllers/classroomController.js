@@ -102,7 +102,13 @@ exports.getClassrooms = async (req, res) => {
     try {
         let query = {};
         if (req.user.role === 'teacher') {
-            query.teacherId = req.user._id;
+            // Show classrooms where teacher is either the lead teacher OR a course teacher
+            query = {
+                $or: [
+                    { teacherId: req.user._id },
+                    { 'courses.teacherId': req.user._id }
+                ]
+            };
         } else if (req.user.role === 'student') {
             query.studentIds = req.user._id;
         }
@@ -287,6 +293,18 @@ exports.deleteComment = async (req, res) => {
 exports.createAssignment = async (req, res) => {
     try {
         const { title, description, subject, dueDate, attachmentUrl, totalMarks } = req.body;
+        
+        // Verify the teacher is assigned to this classroom (lead or course teacher)
+        const classroom = await Classroom.findById(req.params.id);
+        if (!classroom) return res.status(404).json({ message: 'Classroom not found' });
+        
+        const isLeadTeacher = classroom.teacherId?.toString() === req.user._id.toString();
+        const isCourseTeacher = classroom.courses?.some(c => c.teacherId?.toString() === req.user._id.toString());
+        
+        if (req.user.role !== 'teacher' || (!isLeadTeacher && !isCourseTeacher)) {
+            return res.status(403).json({ message: 'Not authorized to create assignments in this classroom' });
+        }
+
         const assignment = new Assignment({
             title, description, subject, dueDate, attachmentUrl,
             classroomId: req.params.id,
@@ -298,7 +316,6 @@ exports.createAssignment = async (req, res) => {
         });
         await assignment.save();
         // Trigger push notifications
-        const classroom = await Classroom.findById(req.params.id);
         if (classroom && classroom.studentIds) {
             for (const studentId of classroom.studentIds) {
                 await sendNotification(

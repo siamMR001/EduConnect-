@@ -42,6 +42,13 @@ const eventSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+// Add indexes for performance optimization
+// Compound index covers both date and endDate queries
+eventSchema.index({ date: 1, endDate: 1 });
+eventSchema.index({ category: 1 });
+eventSchema.index({ organizer: 1 });
+eventSchema.index({ createdAt: -1 }); // For sorting recent events
+
 const Event = mongoose.model('Event', eventSchema);
 module.exports = Event;
 
