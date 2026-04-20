@@ -36,6 +36,7 @@ const upload = multer({
 
 // Routes
 router.get('/', noticeController.getAllNotices);
+router.get('/month/:month/:year', noticeController.getNoticesForMonth);
 router.get('/:id', noticeController.getNoticeById);
 router.get('/category/:category', noticeController.getNoticesByCategory);
 

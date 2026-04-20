@@ -26,6 +26,9 @@ export const noticeAPI = {
             params: { page, limit, category, priority }
         });
     },
+    getNoticesForMonth: (month = 1, year = 2026) => {
+        return api.get(`/notices/month/${month}/${year}`);
+    },
     getNoticeById: (id) => api.get(`/notices/${id}`),
     createNotice: (data, files) => {
         const formData = new FormData();
@@ -35,6 +38,7 @@ export const noticeAPI = {
         formData.append('priority', data.priority);
         formData.append('targetRole', data.targetRole);
         if (data.expiryDate) formData.append('expiryDate', data.expiryDate);
+        if (data.date) formData.append('date', data.date);
         
         if (files && files.length > 0) {
             files.forEach(file => formData.append('attachments', file));

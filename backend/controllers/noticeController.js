@@ -30,6 +30,26 @@ exports.getAllNotices = async (req, res) => {
     }
 };
 
+// Get notices for a specific month (for calendar)
+exports.getNoticesForMonth = async (req, res) => {
+    try {
+        const { month, year } = req.params;
+        
+        // Create start and end dates for the month
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 1);
+
+        const notices = await Notice.find({
+            isActive: true,
+            date: { $gte: startDate, $lt: endDate }
+        }).populate('author', 'name role').sort({ date: 1 });
+
+        res.json(notices);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 // Get single notice by ID
 exports.getNoticeById = async (req, res) => {
     try {
@@ -52,7 +72,7 @@ exports.getNoticeById = async (req, res) => {
 // Create notice (Admin/Teacher)
 exports.createNotice = async (req, res) => {
     try {
-        const { title, content, category, priority, targetRole, expiryDate } = req.body;
+        const { title, content, category, priority, targetRole, expiryDate, date } = req.body;
         const author = req.user._id;
 
         let attachments = [];
@@ -73,7 +93,8 @@ exports.createNotice = async (req, res) => {
             priority: priority || 'normal',
             targetRole: targetRole || 'all',
             attachments,
-            expiryDate
+            expiryDate,
+            date: date ? new Date(date) : null
         });
 
         // Create notifications for recipients
@@ -121,7 +142,7 @@ exports.updateNotice = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to update this notice' });
         }
 
-        const { title, content, category, priority, targetRole, expiryDate, isActive } = req.body;
+        const { title, content, category, priority, targetRole, expiryDate, date, isActive } = req.body;
 
         if (title) notice.title = title;
         if (content) notice.content = content;
@@ -129,6 +150,7 @@ exports.updateNotice = async (req, res) => {
         if (priority) notice.priority = priority;
         if (targetRole) notice.targetRole = targetRole;
         if (expiryDate) notice.expiryDate = expiryDate;
+        if (date) notice.date = new Date(date);
         if (isActive !== undefined) notice.isActive = isActive;
 
         // Handle new file uploads

@@ -83,8 +83,8 @@ export default function AdminGradeConfig() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">Grade Configuration</h1>
-        <p className="text-slate-400">Manage grades, sections, and student capacities for {academicYear}</p>
+        <h1 className="text-4xl font-bold text-white mb-2">Class Configuration</h1>
+        <p className="text-slate-400">Manage classes, sections, and student capacities for {academicYear}</p>
       </div>
 
       {error && (
@@ -98,14 +98,14 @@ export default function AdminGradeConfig() {
           onClick={() => setShowCreateForm(!showCreateForm)}
           className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium flex items-center gap-2 transition-all"
         >
-          <Plus className="w-4 h-4" /> Create New Grade
+          <Plus className="w-4 h-4" /> Create New Class
         </button>
       </div>
 
-      {/* Create Grade Form */}
+      {/* Create Class Form */}
       {showCreateForm && (
         <div className="mb-6 p-6 glass-panel border border-white/10 rounded-lg">
-          <h3 className="text-white font-bold mb-4">Create Grade Configuration</h3>
+          <h3 className="text-white font-bold mb-4">Create Class Configuration</h3>
           <form onSubmit={handleCreateGrade} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-slate-400 text-sm">Grade</label>
@@ -117,7 +117,6 @@ export default function AdminGradeConfig() {
                 className="mt-1 w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500"
                 required
               />
-            </div>
             <div>
               <label className="text-slate-400 text-sm">Number of Sections</label>
               <select
@@ -144,17 +143,17 @@ export default function AdminGradeConfig() {
         </div>
       )}
 
-      {/* Grades List */}
+      {/* Classes List */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400">Loading grades...</div>
+        <div className="text-center py-12 text-slate-400">Loading classes...</div>
       ) : grades.length === 0 ? (
         <div className="text-center py-12 glass-panel border border-white/10 rounded-lg">
-          <p className="text-slate-400 mb-4">No grades configured yet</p>
+          <p className="text-slate-400 mb-4">No classes configured yet</p>
           <button
             onClick={() => setShowCreateForm(true)}
             className="btn-primary"
           >
-            Create First Grade
+            Create First Class
           </button>
         </div>
       ) : (
@@ -163,7 +162,7 @@ export default function AdminGradeConfig() {
             <div key={gradeConfig._id} className="glass-panel border border-white/10 rounded-lg p-6">
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-2xl font-bold text-white">Grade {gradeConfig.grade}</h3>
+                  <h3 className="text-2xl font-bold text-white">Class {gradeConfig.grade}</h3>
                   <div className="text-right">
                     <p className="text-slate-400 text-sm">Total Enrollment</p>
                     <p className="text-2xl font-bold text-white">

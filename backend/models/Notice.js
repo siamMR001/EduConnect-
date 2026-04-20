@@ -19,6 +19,7 @@ const noticeSchema = new mongoose.Schema({
         enum: ['normal', 'high', 'urgent'],
         default: 'normal'
     },
+    date: { type: Date }, // For calendar display
     attachments: [{
         filename: String,
         filepath: String,

@@ -49,7 +49,8 @@ export default function TeacherAssignments() {
             setAssignments(response.data.assignments);
             setError('');
         } catch (err) {
-            setError('Failed to fetch assignments');
+            const errorMsg = err.response?.data?.message || err.message || 'Failed to fetch assignments';
+            setError(errorMsg);
             console.error(err);
         } finally {
             setLoading(false);
@@ -102,7 +103,9 @@ export default function TeacherAssignments() {
             setFiles([]);
             fetchAssignments();
         } catch (err) {
-            alert('Failed to create assignment: ' + err.response?.data?.message || err.message);
+            const errorMsg = err.response?.data?.message || err.message || 'Failed to create assignment';
+            alert('Failed to create assignment: ' + errorMsg);
+            console.error('Assignment creation error:', err);
         }
     };
 
@@ -124,7 +127,9 @@ export default function TeacherAssignments() {
             setStats(statsRes.data);
             setShowSubmissionsModal(true);
         } catch (err) {
-            alert('Failed to fetch submissions: ' + err.response?.data?.message);
+            const errorMsg = err.response?.data?.message || err.message || 'Failed to fetch submissions';
+            alert('Failed to fetch submissions: ' + errorMsg);
+            console.error('Submissions fetch error:', err);
         }
     };
 
@@ -150,7 +155,9 @@ export default function TeacherAssignments() {
             alert('Submission graded successfully!');
             handleViewSubmissions(selectedAssignment);
         } catch (err) {
-            alert('Failed to grade submission: ' + err.response?.data?.message || err.message);
+            const errorMsg = err.response?.data?.message || err.message || 'Failed to grade submission';
+            alert('Failed to grade submission: ' + errorMsg);
+            console.error('Grading error:', err);
         }
     };
 

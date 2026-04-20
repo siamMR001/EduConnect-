@@ -15,7 +15,10 @@ const teacherService = {
         },
       }
     );
-    if (!response.ok) throw new Error('Failed to fetch employees');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch employees');
+    }
     return response.json();
   },
 
@@ -28,18 +31,21 @@ const teacherService = {
         'Content-Type': 'application/json',
       },
     });
-    if (!response.ok) throw new Error('Failed to fetch employee');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch employee');
+    }
     return response.json();
   },
 
   // Get employee by Employee ID (for registration page - public)
   getEmployeeByEmployeeId: async (employeeId) => {
     const response = await fetch(`${API_URL}/teachers/by-employee-id/${employeeId}`);
-    const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.message || 'Employee ID verification failed');
+      const error = await response.json();
+      throw new Error(error.message || 'Employee ID not found');
     }
-    return data;
+    return response.json();
   },
 
   addTeacher: async (teacherData) => {
@@ -52,14 +58,28 @@ const teacherService = {
       },
       body: JSON.stringify(teacherData),
     });
-    const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to add teacher');
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to add teacher');
     }
-    return data;
+    return response.json();
   },
 
-
+  // Verify registration code (public)
+  verifyRegistrationCode: async (employeeId, registrationCode) => {
+    const response = await fetch(`${API_URL}/teachers/verify-registration-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ employeeId, registrationCode }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Invalid registration code');
+    }
+    return response.json();
+  },
 
   // Update employee status (admin only)
   updateEmployeeStatus: async (id, status) => {
@@ -72,11 +92,29 @@ const teacherService = {
       },
       body: JSON.stringify({ status }),
     });
-    if (!response.ok) throw new Error('Failed to update employee status');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update employee status');
+    }
     return response.json();
   },
 
-
+  // Regenerate registration code (admin only)
+  regenerateRegistrationCode: async (id) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/teachers/employee/${id}/regenerate-code`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to regenerate registration code');
+    }
+    return response.json();
+  },
 
   // Delete employee (admin only)
   deleteEmployee: async (id) => {
@@ -88,7 +126,10 @@ const teacherService = {
         'Content-Type': 'application/json',
       },
     });
-    if (!response.ok) throw new Error('Failed to delete employee');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to delete employee');
+    }
     return response.json();
   },
 

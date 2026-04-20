@@ -5,7 +5,6 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdmissionForm from './pages/AdmissionForm';
 import StudentProfile from './pages/StudentProfile';
-import NoticeBoard from './pages/NoticeBoard';
 import EventCalendar from './pages/EventCalendar';
 import NotificationsPanel from './components/NotificationsPanel';
 import StudentDirectory from './pages/StudentDirectory';
@@ -78,9 +77,6 @@ function App() {
                   <Link to="/dashboard" className="text-slate-300 hover:text-white font-medium transition-colors">
                     Dashboard
                   </Link>
-                  <Link to="/notices" className="text-slate-300 hover:text-white font-medium transition-colors">
-                    Notices
-                  </Link>
                   <Link to="/calendar" className="text-slate-300 hover:text-white font-medium transition-colors">
                     Calendar
                   </Link>
@@ -102,7 +98,7 @@ function App() {
                         TEM
                       </Link>
                       <Link to="/admin/grades" className="text-slate-300 hover:text-white font-medium transition-colors">
-                        Grades
+                        Classes
                       </Link>
                       <Link to="/admin/students" className="text-slate-300 hover:text-white font-medium transition-colors">
                         Students
@@ -152,7 +148,6 @@ function App() {
           <Routes>
             <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login />} />
             <Route path="/dashboard" element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" replace />} />
-            <Route path="/notices" element={isLoggedIn ? <NoticeBoard /> : <Navigate to="/login" replace />} />
             <Route path="/calendar" element={isLoggedIn ? <EventCalendar /> : <Navigate to="/login" replace />} />
             <Route path="/student-assignments" element={isLoggedIn && user?.role === 'student' ? <StudentAssignments /> : <Navigate to="/dashboard" replace />} />
             <Route path="/teacher-assignments" element={isLoggedIn && user?.role === 'teacher' ? <TeacherAssignments /> : <Navigate to="/dashboard" replace />} />

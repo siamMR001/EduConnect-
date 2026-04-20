@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Users, Clock, Plus, X } from 'lucide-react';
-import { eventAPI } from '../services/api';
+import { eventAPI, noticeAPI } from '../services/api';
 
 export default function EventCalendar() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState([]);
+    const [notices, setNotices] = useState([]);
     const [selectedDate, setSelectedDate] = useState(null);
-    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [itemType, setItemType] = useState(null); // 'event' or 'notice'
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [categoryFilter, setCategoryFilter] = useState('');
+    const [user, setUser] = useState(null);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -26,60 +30,100 @@ export default function EventCalendar() {
     const categories = ['academic', 'sports', 'club', 'holiday', 'cultural', 'other'];
     const targetRoles = ['all', 'teacher', 'student', 'admin'];
 
-    // Fetch events for current month
-    const fetchEvents = async () => {
+    // Fetch events and notices for current month
+    const fetchCalendarData = async () => {
         try {
             setLoading(true);
-            const response = await eventAPI.getEventsForMonth(
-                currentDate.getMonth() + 1,
-                currentDate.getFullYear()
-            );
-            setEvents(response.data);
+            setError(null);
+            console.log('Fetching calendar data for:', currentDate.getMonth() + 1, currentDate.getFullYear());
+            
+            const [eventsResponse, noticesResponse] = await Promise.all([
+                eventAPI.getEventsForMonth(
+                    currentDate.getMonth() + 1,
+                    currentDate.getFullYear()
+                ),
+                noticeAPI.getNoticesForMonth(
+                    currentDate.getMonth() + 1,
+                    currentDate.getFullYear()
+                )
+            ]);
+            
+            console.log('Events response:', eventsResponse.data);
+            console.log('Notices response:', noticesResponse.data);
+            
+            setEvents(eventsResponse.data || []);
+            setNotices(noticesResponse.data || []);
         } catch (error) {
-            console.error('Failed to fetch events:', error);
+            console.error('Failed to fetch calendar data:', error);
+            setError(error.message || 'Failed to fetch calendar data');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchEvents();
+        fetchCalendarData();
     }, [currentDate]);
 
-    // Get days in month
-    const getDaysInMonth = (date) => {
-        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-    };
+    useEffect(() => {
+        const userData = JSON.parse(localStorage.getItem('user'));
+        setUser(userData);
+    }, []);
 
     // Get first day of month (0-6, where 0 is Sunday)
     const getFirstDayOfMonth = (date) => {
         return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
     };
 
-    // Get events for a specific date
-    const getEventsForDate = (day) => {
-        return events.filter(event => {
-            const eventDate = new Date(event.date);
+    // Get days in month
+    const getDaysInMonth = (date) => {
+        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    };
+
+    // Get events and notices for a specific date
+    const getItemsForDate = (day) => {
+        // Create a date object for the specific day in current month
+        const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        
+        const dayEvents = events.filter(event => {
+            const eventStart = new Date(event.date);
+            const eventEnd = event.endDate ? new Date(event.endDate) : eventStart;
+            
+            // Check if targetDate is within the event duration (inclusive)
             return (
-                eventDate.getDate() === day &&
-                eventDate.getMonth() === currentDate.getMonth() &&
-                eventDate.getFullYear() === currentDate.getFullYear()
+                targetDate >= eventStart &&
+                targetDate <= eventEnd
             );
         });
+
+        const dayNotices = notices.filter(notice => {
+            if (!notice.date) return false;
+            
+            const noticeStart = new Date(notice.date);
+            const noticeEnd = notice.expiryDate ? new Date(notice.expiryDate) : noticeStart;
+            
+            // Check if targetDate is within the notice duration (inclusive)
+            return (
+                targetDate >= noticeStart &&
+                targetDate <= noticeEnd
+            );
+        });
+
+        return { events: dayEvents, notices: dayNotices };
     };
 
     // Handle previous month
     const goToPreviousMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
         setSelectedDate(null);
-        setSelectedEvent(null);
+        setSelectedItem(null);
     };
 
     // Handle next month
     const goToNextMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
         setSelectedDate(null);
-        setSelectedEvent(null);
+        setSelectedItem(null);
     };
 
     // Handle create event
@@ -102,7 +146,7 @@ export default function EventCalendar() {
                 targetRole: 'all',
                 capacity: ''
             });
-            fetchEvents();
+            fetchCalendarData();
         } catch (error) {
             console.error('Failed to create event:', error);
             alert('Failed to create event');
@@ -154,13 +198,15 @@ export default function EventCalendar() {
                         <Calendar className="w-8 h-8 text-primary-light" />
                         <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white">Event Calendar</h1>
                     </div>
-                    <button
-                        onClick={() => setShowCreateForm(!showCreateForm)}
-                        className="btn-primary flex items-center gap-2"
-                    >
-                        <Plus className="w-5 h-5" />
-                        New Event
-                    </button>
+                    {user?.role === 'admin' && (
+                        <button
+                            onClick={() => setShowCreateForm(!showCreateForm)}
+                            className="btn-primary flex items-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            New Event
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -333,9 +379,16 @@ export default function EventCalendar() {
                         </div>
                     </div>
 
+                    {error && (
+                        <div className="bg-red-500/20 border border-red-500 rounded-lg p-4 mb-4 text-red-200">
+                            <p>Error: {error}</p>
+                        </div>
+                    )}
+
                     {loading ? (
                         <div className="text-center py-12">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-light"></div>
+                            <p className="text-slate-400 mt-2">Loading calendar...</p>
                         </div>
                     ) : (
                         <>
@@ -355,7 +408,11 @@ export default function EventCalendar() {
                                         return <div key={`empty-${idx}`} className="h-24 bg-white/5 rounded-lg"></div>;
                                     }
 
-                                    const dayEvents = getEventsForDate(day);
+                                    const dayItems = getItemsForDate(day);
+                                    const combinedItems = [
+                                        ...dayItems.events.map(e => ({ ...e, _type: 'event' })),
+                                        ...dayItems.notices.map(n => ({ ...n, _type: 'notice' }))
+                                    ];
                                     const isToday =
                                         day === new Date().getDate() &&
                                         currentDate.getMonth() === new Date().getMonth() &&
@@ -370,7 +427,7 @@ export default function EventCalendar() {
                                                     ? 'border-primary-light bg-primary/20'
                                                     : isToday
                                                     ? 'border-primary bg-primary/10'
-                                                    : dayEvents.length > 0
+                                                    : combinedItems.length > 0
                                                     ? 'border-white/10 bg-white/5'
                                                     : 'border-white/5 bg-transparent hover:bg-white/5'
                                             }`}
@@ -379,21 +436,29 @@ export default function EventCalendar() {
                                                 {day}
                                             </div>
                                             <div className="space-y-1 overflow-y-auto max-h-16">
-                                                {dayEvents.slice(0, 3).map((event, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedEvent(event);
-                                                        }}
-                                                        className={`text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition ${getCategoryColor(event.category)}`}
-                                                    >
-                                                        {event.title}
-                                                    </div>
-                                                ))}
-                                                {dayEvents.length > 3 && (
+                                                {combinedItems.slice(0, 3).map((item, idx) => {
+                                                    const isEvent = item._type === 'event';
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedItem(item);
+                                                                setItemType(isEvent ? 'event' : 'notice');
+                                                            }}
+                                                            className={`text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition ${
+                                                                isEvent
+                                                                    ? getCategoryColor(item.category)
+                                                                    : 'bg-amber-600'
+                                                            }`}
+                                                        >
+                                                            {isEvent ? '📅' : '📢'} {item.title}
+                                                        </div>
+                                                    );
+                                                })}
+                                                {combinedItems.length > 3 && (
                                                     <div className="text-xs text-slate-400 px-2">
-                                                        +{dayEvents.length - 3} more
+                                                        +{combinedItems.length - 3} more
                                                     </div>
                                                 )}
                                             </div>
@@ -405,9 +470,9 @@ export default function EventCalendar() {
                     )}
                 </div>
 
-                {/* Events Sidebar */}
+                {/* Events & Notices Sidebar */}
                 <div className="glass-panel p-6 h-fit">
-                    <h3 className="text-xl font-bold text-white mb-4">Upcoming Events</h3>
+                    <h3 className="text-xl font-bold text-white mb-4">📅 Events & 📢 Notices</h3>
 
                     {/* Category filter */}
                     <select
@@ -422,46 +487,89 @@ export default function EventCalendar() {
                     </select>
 
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {filteredEvents.length === 0 ? (
-                            <p className="text-slate-400 text-sm">No events scheduled</p>
+                        {events.length === 0 && notices.length === 0 ? (
+                            <p className="text-slate-400 text-sm">No events or notices scheduled</p>
                         ) : (
-                            filteredEvents.slice(0, 10).map(event => (
-                                <div
-                                    key={event._id}
-                                    onClick={() => setSelectedEvent(event)}
-                                    className="p-3 border border-white/10 rounded-lg hover:border-primary-light hover:bg-primary/20 cursor-pointer transition"
-                                >
-                                    <div className="flex items-start gap-2">
-                                        <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${getCategoryColor(event.category)}`}></div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-white truncate text-sm">{event.title}</p>
-                                            <p className="text-xs text-slate-400">
-                                                {new Date(event.date).toLocaleDateString()}
-                                            </p>
-                                            {event.time && (
-                                                <p className="text-xs text-slate-500 flex items-center gap-1">
-                                                    <Clock className="w-3 h-3" />
-                                                    {event.time}
+                            <>
+                                {events.map(event => (
+                                    <div
+                                        key={event._id}
+                                        onClick={() => {
+                                            setSelectedItem(event);
+                                            setItemType('event');
+                                        }}
+                                        className="p-3 border border-white/10 rounded-lg hover:border-primary-light hover:bg-primary/20 cursor-pointer transition"
+                                    >
+                                        <div className="flex items-start gap-2">
+                                            <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${getCategoryColor(event.category)}`}></div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-white truncate text-sm">📅 {event.title}</p>
+                                                <p className="text-xs text-slate-400">
+                                                    {new Date(event.date).toLocaleDateString()}
                                                 </p>
-                                            )}
+                                                {event.time && (
+                                                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        {event.time}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                ))}
+                                {notices.map(notice => (
+                                    <div
+                                        key={notice._id}
+                                        onClick={() => {
+                                            setSelectedItem(notice);
+                                            setItemType('notice');
+                                        }}
+                                        className="p-3 border border-white/10 rounded-lg hover:border-amber-400 hover:bg-amber-600/20 cursor-pointer transition"
+                                    >
+                                        <div className="flex items-start gap-2">
+                                            <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0 bg-amber-600"></div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-white truncate text-sm">📢 {notice.title}</p>
+                                                {notice.date && (
+                                                    <p className="text-xs text-slate-400">
+                                                        {new Date(notice.date).toLocaleDateString()}
+                                                    </p>
+                                                )}
+                                                <p className={`text-xs font-semibold ${
+                                                    notice.priority === 'urgent' ? 'text-red-400' :
+                                                    notice.priority === 'high' ? 'text-orange-400' :
+                                                    'text-slate-400'
+                                                }`}>
+                                                    {notice.priority.toUpperCase()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Event Detail Modal */}
-            {selectedEvent && (
+            {/* Detail Modal - Event or Notice */}
+            {selectedItem && (
                 <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="glass-panel max-w-lg w-full">
-                        <div className="bg-gradient-to-r from-primary to-primary-dark p-6 text-white rounded-t-2xl">
+                        <div className={`bg-gradient-to-r p-6 text-white rounded-t-2xl ${
+                            itemType === 'event'
+                                ? 'from-primary to-primary-dark'
+                                : 'from-amber-700 to-amber-900'
+                        }`}>
                             <div className="flex items-start justify-between">
-                                <h2 className="text-2xl font-bold">{selectedEvent.title}</h2>
+                                <h2 className="text-2xl font-bold">
+                                    {itemType === 'event' ? '📅' : '📢'} {selectedItem.title}
+                                </h2>
                                 <button
-                                    onClick={() => setSelectedEvent(null)}
+                                    onClick={() => {
+                                        setSelectedItem(null);
+                                        setItemType(null);
+                                    }}
                                     className="hover:bg-white/20 p-1 rounded transition"
                                 >
                                     <X className="w-6 h-6" />
@@ -471,52 +579,72 @@ export default function EventCalendar() {
 
                         <div className="p-6 space-y-4">
                             <div className="text-sm text-slate-400">
-                                <span className="font-semibold text-slate-300">{selectedEvent.category.toUpperCase()}</span>
+                                <span className="font-semibold text-slate-300">
+                                    {itemType === 'event'
+                                        ? selectedItem.category?.toUpperCase()
+                                        : `${selectedItem.priority?.toUpperCase()} - ${selectedItem.category?.toUpperCase()}`
+                                    }
+                                </span>
                             </div>
 
-                            {selectedEvent.description && (
+                            {itemType === 'event' && selectedItem.description && (
                                 <div>
-                                    <p className="text-slate-200">{selectedEvent.description}</p>
+                                    <p className="text-slate-200">{selectedItem.description}</p>
+                                </div>
+                            )}
+
+                            {itemType === 'notice' && selectedItem.content && (
+                                <div>
+                                    <p className="text-slate-200">{selectedItem.content}</p>
                                 </div>
                             )}
 
                             <div className="border-t border-white/10 pt-4 space-y-2">
                                 <div className="flex items-center gap-2 text-slate-300">
                                     <Calendar className="w-4 h-4" />
-                                    <span>{new Date(selectedEvent.date).toLocaleDateString()}</span>
-                                    {selectedEvent.endDate && (
+                                    <span>{new Date(itemType === 'event' ? selectedItem.date : (selectedItem.date || selectedItem.createdAt)).toLocaleDateString()}</span>
+                                    {itemType === 'event' && selectedItem.endDate && (
                                         <>
                                             <span>to</span>
-                                            <span>{new Date(selectedEvent.endDate).toLocaleDateString()}</span>
+                                            <span>{new Date(selectedItem.endDate).toLocaleDateString()}</span>
                                         </>
                                     )}
                                 </div>
 
-                                {selectedEvent.time && (
+                                {itemType === 'event' && selectedItem.time && (
                                     <div className="flex items-center gap-2 text-slate-300">
                                         <Clock className="w-4 h-4" />
-                                        <span>{selectedEvent.time}</span>
+                                        <span>{selectedItem.time}</span>
                                     </div>
                                 )}
 
-                                {selectedEvent.location && (
+                                {itemType === 'event' && selectedItem.location && (
                                     <div className="flex items-center gap-2 text-slate-300">
                                         <MapPin className="w-4 h-4" />
-                                        <span>{selectedEvent.location}</span>
+                                        <span>{selectedItem.location}</span>
                                     </div>
                                 )}
 
-                                {selectedEvent.capacity && (
+                                {itemType === 'event' && selectedItem.capacity && (
                                     <div className="flex items-center gap-2 text-slate-300">
                                         <Users className="w-4 h-4" />
-                                        <span>{selectedEvent.registeredUsers?.length || 0} / {selectedEvent.capacity} registered</span>
+                                        <span>{selectedItem.registeredUsers?.length || 0} / {selectedItem.capacity} registered</span>
+                                    </div>
+                                )}
+
+                                {itemType === 'notice' && selectedItem.expiryDate && (
+                                    <div className="text-xs text-slate-400">
+                                        Expires: {new Date(selectedItem.expiryDate).toLocaleDateString()}
                                     </div>
                                 )}
                             </div>
 
                             <div className="pt-4">
                                 <button
-                                    onClick={() => setSelectedEvent(null)}
+                                    onClick={() => {
+                                        setSelectedItem(null);
+                                        setItemType(null);
+                                    }}
                                     className="btn-secondary w-full"
                                 >
                                     Close
