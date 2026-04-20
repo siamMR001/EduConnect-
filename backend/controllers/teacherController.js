@@ -145,31 +145,48 @@ exports.updateEmployee = async (req, res) => {
         
         const updateData = { ...req.body };
         
-        // Clean data: Convert empty strings to null for certain fields to avoid validation errors
-        ['dateOfBirth', 'email', 'phone'].forEach(field => {
-            if (updateData[field] === '') {
-                updateData[field] = null;
+        // Clean data: Aggressively convert/remove empty strings to avoid validation/enum errors
+        Object.keys(updateData).forEach(key => {
+            if (updateData[key] === '' || updateData[key] === 'undefined' || updateData[key] === 'null') {
+                // For fields that allow null (like sparse unique email/phone), set to null
+                if (['email', 'phone', 'dateOfBirth', 'gender', 'maritalStatus'].includes(key)) {
+                    updateData[key] = null;
+                } else {
+                    // For other fields, delete from object to keep existing value and avoid validation failure
+                    delete updateData[key];
+                }
             }
         });
 
+        // Additional validation for dates
+        if (updateData.dateOfBirth && isNaN(new Date(updateData.dateOfBirth).getTime())) {
+            updateData.dateOfBirth = null;
+        }
+
+        // Check for email collision manually for better error reporting
+        if (updateData.email) {
+            const existingEmail = await EmployeeID.findOne({ 
+                email: updateData.email.toLowerCase().trim(), 
+                _id: { $ne: req.params.id } 
+            });
+            if (existingEmail) {
+                return res.status(400).json({ message: `The email address '${updateData.email}' is already linked to another employee.` });
+            }
+        }
+
         // Handle file uploads if present
         if (req.files) {
-            console.log('Files detected in request:', Object.keys(req.files));
             if (req.files['profilePicture']) {
                 const pic = req.files['profilePicture'][0];
-                console.log('New Profile Picture:', pic.filename);
                 updateData.profilePicture = `/uploads/teacher_docs/${pic.filename}`;
             }
             if (req.files['professionalDocs']) {
                 const doc = req.files['professionalDocs'][0];
-                console.log('New Professional Doc:', doc.filename);
                 // Map consolidated PDF to cvDocument and nidDocument for consistency
                 const filePath = `/uploads/teacher_docs/${doc.filename}`;
                 updateData.cvDocument = filePath;
-                updateData.nidDocument = filePath; // Consolidated PDF
+                updateData.nidDocument = filePath;
             }
-        } else {
-            console.log('No files found in req.files');
         }
 
         const employee = await EmployeeID.findByIdAndUpdate(

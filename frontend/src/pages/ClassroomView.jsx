@@ -44,6 +44,7 @@ export default function ClassroomView() {
    const [materialFile, setMaterialFile] = useState(null);
    const [newMaterial, setNewMaterial] = useState({ title: '', type: 'pdf', url: '', description: '' });
    const [isSavingGrades, setIsSavingGrades] = useState(false);
+   const [isSavingConfig, setIsSavingConfig] = useState(false);
   useEffect(() => {
     const usr = JSON.parse(localStorage.getItem('user'));
     setUser(usr);
@@ -128,10 +129,28 @@ export default function ClassroomView() {
   const handleUpdateConfig = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/subjects/config', { classroomId: id, courseId: selectedSubject._id, categories: gradeConfig.categories });
+      setIsSavingConfig(true);
+      // Filter out empty labels or zero weights
+      const cleanedCategories = gradeConfig.categories.filter(c => c.label.trim() !== '' && c.weight > 0);
+      
+      const totalWeight = cleanedCategories.reduce((acc, c) => acc + c.weight, 0);
+      if (totalWeight !== 100) {
+        throw new Error('Total weight must equal 100%');
+      }
+
+      await api.post('/subjects/config', { 
+        classroomId: id, 
+        courseId: selectedSubject._id, 
+        categories: cleanedCategories 
+      });
+      
       setIsConfiguring(false);
       fetchSubjectData(selectedSubject._id);
-    } catch (err) { alert('Error updating configuration'); }
+    } catch (err) { 
+      alert(err.response?.data?.message || err.message || 'Error updating configuration'); 
+    } finally {
+      setIsSavingConfig(false);
+    }
   };
 
   const handleGradeChange = (studentId, category, value) => {
@@ -943,8 +962,9 @@ export default function ClassroomView() {
                             {gradeConfig.categories.map(cat => (
                               <th key={cat.label} className="p-6 text-center">
                                 <div className="flex flex-col items-center">
-                                  <span>{cat.label}</span>
+                                  <span className="text-white font-bold">{cat.label}</span>
                                   <span className="text-[8px] text-blue-500/50 mt-1">{cat.weight}% Weight</span>
+                                  <span className="text-[8px] text-slate-500 mt-0.5 font-bold uppercase tracking-tighter">Max: {cat.maxMarks || 100}</span>
                                 </div>
                               </th>
                             ))}
@@ -957,7 +977,8 @@ export default function ClassroomView() {
                             let total = 0;
                             gradeConfig.categories.forEach(cat => {
                               const score = parseFloat(sg.scores[cat.label]) || 0;
-                              total += (score * cat.weight) / 100;
+                              const max = cat.maxMarks || 100;
+                              total += (score / max) * cat.weight;
                             });
 
                             return (
@@ -1070,7 +1091,18 @@ export default function ClassroomView() {
                             setGradeConfig({...gradeConfig, categories: newCats});
                           }} className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none" placeholder="Quiz, Mid..." />
                         </div>
-                        <div className="w-24">
+                        <div className="w-20">
+                          <label className="block text-slate-500 text-[9px] font-black uppercase tracking-widest mb-2">Max Marks</label>
+                          <input type="number" 
+                            value={cat.maxMarks || ''} 
+                            onFocus={(e) => e.target.select()}
+                            onChange={e => {
+                              const newCats = [...gradeConfig.categories];
+                              newCats[idx].maxMarks = parseInt(e.target.value) || 0;
+                              setGradeConfig({...gradeConfig, categories: newCats});
+                            }} className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-white font-bold text-center outline-none" />
+                        </div>
+                        <div className="w-20">
                           <label className="block text-slate-500 text-[9px] font-black uppercase tracking-widest mb-2">Weight %</label>
                           <input type="number" 
                             value={cat.weight || ''} 
@@ -1091,16 +1123,29 @@ export default function ClassroomView() {
                     ))}
                     <button 
                       type="button" 
-                      onClick={() => setGradeConfig({...gradeConfig, categories: [...gradeConfig.categories, { label: '', weight: 0 }]})}
+                      onClick={() => setGradeConfig({...gradeConfig, categories: [...gradeConfig.categories, { label: '', weight: 0, maxMarks: 100 }]})}
                       className="w-full py-4 border-2 border-dashed border-white/10 rounded-2xl text-slate-500 hover:text-blue-400 hover:border-blue-500/30 font-bold transition-all flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" /> Add Assessment Category
                     </button>
                   </div>
                   
-                  <div className="pt-6 border-t border-white/5 flex justify-between items-center text-slate-400 font-bold">
-                    <span>Total Weight: <span className={gradeConfig.categories.reduce((acc, c) => acc + c.weight, 0) === 100 ? 'text-green-400' : 'text-red-400'}>{gradeConfig.categories.reduce((acc, c) => acc + c.weight, 0)}%</span></span>
-                    <button type="submit" disabled={gradeConfig.categories.reduce((acc, c) => acc + c.weight, 0) !== 100} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50">Commit Config</button>
+                  <div className="pt-6 border-t border-white/5 flex flex-col gap-4">
+                    <div className="flex justify-between items-center text-slate-400 font-bold">
+                       <span>Total Weight: <span className={gradeConfig.categories.reduce((acc, c) => acc + c.weight, 0) === 100 ? 'text-green-400' : 'text-red-400'}>{gradeConfig.categories.reduce((acc, c) => acc + c.weight, 0)}%</span></span>
+                       <button 
+                         type="submit" 
+                         disabled={gradeConfig.categories.reduce((acc, c) => acc + c.weight, 0) !== 100 || isSavingConfig} 
+                         className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50"
+                       >
+                         {isSavingConfig ? 'Saving...' : 'Commit Config'}
+                       </button>
+                    </div>
+                    {gradeConfig.categories.reduce((acc, c) => acc + c.weight, 0) !== 100 && (
+                       <p className="text-[10px] text-red-400 font-black uppercase tracking-widest text-center animate-pulse">
+                         ⚠️ Total weight must be exactly 100% to save
+                       </p>
+                    )}
                   </div>
                 </form>
               </div>
