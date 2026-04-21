@@ -166,30 +166,15 @@ const StudentDirectory = () => {
                     </h1>
                     <p className="text-slate-400 text-sm">Digital profiles · Parent records · Academic history · ID cards</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    <button className="glass-panel px-4 py-2.5 flex items-center gap-2 hover:bg-white/5 transition border border-white/10 text-sm text-white rounded-xl">
-                        <Upload size={15} className="text-primary-light" />
-                        Import CSV
-                    </button>
-                    <button className="glass-panel px-4 py-2.5 flex items-center gap-2 hover:bg-white/5 transition border border-white/10 text-sm text-white rounded-xl">
-                        <Download size={15} className="text-primary-light" />
-                        Export All
-                    </button>
-                    <button className="btn-primary flex items-center gap-2 px-5 py-2.5 text-sm rounded-xl">
-                        <Plus size={16} />
-                        Add Student
-                    </button>
-                </div>
+
             </header>
 
             {/* ── Stats Dashboard ──────────────────────────────── */}
-            <div className="glass-panel border border-white/10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-white/10 mb-6">
+            <div className="glass-panel border border-white/10 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 divide-x divide-white/10 mb-6">
                 <StatBox label="TOTAL STUDENTS" value={stats.total} color="text-white" />
                 <StatBox label="ACTIVE" value={stats.active} color="text-green-400" />
                 <StatBox label="INACTIVE" value={stats.inactive} color="text-red-400" />
-                <StatBox label="CLASSES" value={stats.classes} color="text-white" />
-                <StatBox label="AVG GPA" value={stats.avgGpa} color="text-white" />
-                <StatBox label="AVG ATTENDANCE" value={`${stats.avgAtt}%`} color="text-white" />
+                <StatBox label="TOTAL CLASSES" value="12" color="text-white" />
             </div>
 
             {/* ── Search & Filters ─────────────────────────────── */}
@@ -206,8 +191,13 @@ const StudentDirectory = () => {
                         />
                     </div>
                     <div className="flex items-center gap-3 w-full lg:w-auto flex-wrap">
-                        <FilterSelect label="All Classes" value={classFilter} onChange={setClassFilter} options={uniqueClasses.map(c => ({ value: c, label: `Class ${c}` }))} />
-                        <FilterSelect label="All Sections" value={sectionFilter} onChange={setSectionFilter} options={uniqueSections.map(s => ({ value: s, label: `Section ${s}` }))} />
+                        <FilterSelect 
+                            label="All Classes" 
+                            value={classFilter} 
+                            onChange={setClassFilter} 
+                            options={Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `Class ${i + 1}` }))} 
+                        />
+                        <FilterSelect label="All Sections" value={sectionFilter} onChange={setSectionFilter} options={['A', 'B', 'C'].map(s => ({ value: s, label: `Section ${s}` }))} />
                         <FilterSelect label="All Status" value={statusFilter} onChange={setStatusFilter} options={[{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }]} />
                         <FilterSelect label="All Gender" value={genderFilter} onChange={setGenderFilter} options={[{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }]} />
                     </div>

@@ -3,19 +3,44 @@ import { useNavigate } from 'react-router-dom';
 import { UserPlus, ChevronRight, CheckCircle, School, AlertCircle, Upload, CreditCard } from 'lucide-react';
 
 // Helper for rendering inputs
-const Input = ({ label, name, type = "text", req = false, isFile = false, multi = false, acc, formData, handleChange, handleFileChange }) => (
-    <div>
-        <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>
-        {isFile ? (
-            <div className="relative group">
-                <input type="file" name={name} onChange={handleFileChange} multiple={multi} accept={acc}
-                    className="input-field file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30" />
-            </div>
-        ) : (
-            <input type={type} name={name} value={name.includes('.') ? formData[name.split('.')[0]][name.split('.')[1]] : formData[name]} onChange={handleChange} className={`input-field ${type === 'date' ? '[color-scheme:dark]' : ''}`} />
-        )}
-    </div>
-);
+const Input = ({ label, name, type = "text", req = false, isFile = false, multi = false, acc, formData, handleChange, handleFileChange, fileValue }) => {
+    // Helper to generate preview URL for an image file
+    const getPreviewUrl = (file) => {
+        if (file && file.type && file.type.startsWith('image/')) {
+            try {
+                return URL.createObjectURL(file);
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
+    };
+
+    return (
+        <div>
+            <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>
+            {isFile ? (
+                <div className="relative group">
+                    <input type="file" name={name} onChange={handleFileChange} multiple={multi} accept={acc}
+                        className="input-field file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30" />
+                    {!multi && fileValue && getPreviewUrl(fileValue) && (
+                        <div className="mt-3 relative w-20 h-20 rounded-xl overflow-hidden border border-white/10 shadow-lg shrink-0 group-hover:border-primary/40 transition-colors">
+                            <img src={getPreviewUrl(fileValue)} alt="Preview" className="w-full h-full object-cover" />
+                        </div>
+                    )}
+                    {!multi && fileValue && !getPreviewUrl(fileValue) && (
+                        <p className="mt-2 text-xs text-green-400 font-medium">✓ File selected: {fileValue.name}</p>
+                    )}
+                    {multi && fileValue && fileValue.length > 0 && (
+                        <p className="mt-2 text-xs text-green-400 font-medium">✓ {fileValue.length} file(s) selected</p>
+                    )}
+                </div>
+            ) : (
+                <input type={type} name={name} value={name.includes('.') ? formData[name.split('.')[0]][name.split('.')[1]] : formData[name]} onChange={handleChange} className={`input-field ${type === 'date' ? '[color-scheme:dark]' : ''}`} />
+            )}
+        </div>
+    );
+};
 
 const AdmissionForm = () => {
     const navigate = useNavigate();
@@ -256,8 +281,8 @@ const AdmissionForm = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Identification Marks" name="identificationMarks" />
-                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Student Photo" name="studentPhoto" isFile acc="image/*" />
+                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.identificationMarks} label="Identification Marks" name="identificationMarks" />
+                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.studentPhoto} label="Student Photo" name="studentPhoto" isFile acc="image/*" />
                                 <div className="md:col-span-3">
                                     <label className="block text-sm font-medium text-slate-400 mb-1">Any Medical Records</label>
                                     <textarea name="medicalRecords" rows="2" className="input-field resize-none" value={formData.medicalRecords} onChange={handleChange} />
@@ -284,7 +309,7 @@ const AdmissionForm = () => {
                                     <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Occupation" name="fatherOccupation" />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Father's Photo" name="fatherPhoto" isFile acc="image/*" />
+                                    <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.fatherPhoto} label="Father's Photo" name="fatherPhoto" isFile acc="image/*" />
                                 </div>
                             </div>
 
@@ -303,7 +328,7 @@ const AdmissionForm = () => {
                                     <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Occupation" name="motherOccupation" />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Mother's Photo" name="motherPhoto" isFile acc="image/*" />
+                                    <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.motherPhoto} label="Mother's Photo" name="motherPhoto" isFile acc="image/*" />
                                 </div>
                             </div>
 
@@ -316,7 +341,7 @@ const AdmissionForm = () => {
                                         <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Email Address" name="guardianEmail" type="email" />
                                         <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Relation" name="guardianRelation" />
                                         <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Occupation" name="guardianOccupation" />
-                                        <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Guardian's Photo" name="guardianPhoto" isFile acc="image/*" />
+                                        <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.guardianPhoto} label="Guardian's Photo" name="guardianPhoto" isFile acc="image/*" />
                                     </div>
                                 </>
                             )}
@@ -360,11 +385,11 @@ const AdmissionForm = () => {
                             <h3 className="text-xl font-semibold border-b border-white/10 pb-2 mb-6 text-white text-primary-light">4. Academic & Documents</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Previous School Name" name="previousSchool" />
-                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Previous Result Sheet" name="previousResultSheet" isFile acc=".pdf,image/*" />
+                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.previousResultSheet} label="Previous Result Sheet" name="previousResultSheet" isFile acc=".pdf,image/*" />
                                 <div className="md:col-span-2 p-6 rounded-xl bg-primary/10 border border-primary/20">
                                     <h4 className="text-sm font-medium text-primary mb-2 flex items-center gap-2"><Upload size={16} /> Upload All Accompanying Documents</h4>
                                     <p className="text-xs text-slate-400 mb-4">Please upload Student's Birth Certificate, Father/Mother's NID, and Guardian's NID merged or as individual PDFs (Max 10 files).</p>
-                                    <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Select PDF Files" name="documentsPdf" isFile multi acc=".pdf" />
+                                    <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.documentsPdf} label="Select PDF Files" name="documentsPdf" isFile multi acc=".pdf" />
                                 </div>
                             </div>
                         </div>

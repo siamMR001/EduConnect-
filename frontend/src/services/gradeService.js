@@ -75,18 +75,18 @@ const gradeService = {
     return response.json();
   },
 
-  // Update section capacity (admin only)
-  updateSectionCapacity: async (grade, sectionName, maxStudents, academicYear = new Date().getFullYear().toString()) => {
+  // Update section name and capacity (admin only)
+  updateSection: async (grade, sectionName, newSectionName, maxStudents, academicYear = new Date().getFullYear().toString()) => {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/grades/update-section-capacity`, {
+    const response = await fetch(`${API_URL}/grades/update-section`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ grade, sectionName, maxStudents, academicYear }),
+      body: JSON.stringify({ grade, sectionName, newSectionName, maxStudents, academicYear }),
     });
-    if (!response.ok) throw new Error('Failed to update section capacity');
+    if (!response.ok) throw new Error('Failed to update section');
     return response.json();
   },
 };

@@ -432,7 +432,7 @@ export default function AdminTeacherDashboard() {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-5">
                       <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-primary border border-white/10 overflow-hidden shadow-2xl relative group-hover:scale-105 transition-transform duration-300">
-                         {emp.profilePicture ? (
+                         {emp.profilePicture && emp.employeeType !== 'admin' ? (
                            <img src={`${import.meta.env.VITE_API_URL}${emp.profilePicture}`} className="w-full h-full object-cover" />
                          ) : (
                            <User size={24} />
@@ -527,14 +527,14 @@ export default function AdminTeacherDashboard() {
             <div className="p-12">
               <div className="flex flex-col md:flex-row items-center md:items-end gap-10 mb-16 px-4">
                 <div className="w-40 h-40 rounded-[2.5rem] bg-slate-900 border-8 border-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.4)] overflow-hidden relative group shrink-0">
-                  {selectedEmployee.profilePicture ? (
+                  {selectedEmployee.profilePicture && selectedEmployee.employeeType !== 'admin' ? (
                     <img src={`${import.meta.env.VITE_API_URL}${selectedEmployee.profilePicture}`} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-primary bg-primary/5">
                       <User size={80} strokeWidth={1} />
                     </div>
                   )}
-                  {editMode && (
+                  {editMode && selectedEmployee.employeeType !== 'admin' && (
                     <label className="absolute inset-0 bg-primary/40 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
                         <Upload className="text-white mb-2" size={32} />
                         <span className="text-[10px] font-black text-white uppercase tracking-widest text-center">Change<br/>Photo</span>

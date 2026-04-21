@@ -25,6 +25,7 @@ export default function ClassroomView() {
   
   // Results
   const [results, setResults] = useState([]);
+  const [cumulativeResults, setCumulativeResults] = useState([]);
   const [examName, setExamName] = useState('');
   const [resultFile, setResultFile] = useState(null);
    // Attendance
@@ -58,7 +59,10 @@ export default function ClassroomView() {
 
       if (activeTab === 'Feed') fetchPosts();
       else if (activeTab === 'Assignments') fetchAssignments();
-      else if (activeTab === 'Results') fetchResults();
+      else if (activeTab === 'Results') {
+          fetchResults();
+          fetchCumulativeResults();
+      }
       else if (activeTab === 'Attendance') fetchAttendanceData();
       else if (activeTab === 'Subjects' && selectedSubject) fetchSubjectData(selectedSubject._id);
       // 'Members' data is already part of the classroom object from the initial fetch
@@ -215,6 +219,14 @@ export default function ClassroomView() {
   const fetchResults = async () => {
     const res = await api.get(`/classrooms/${id}/results`);
     setResults(res.data);
+  };
+  const fetchCumulativeResults = async () => {
+    try {
+      const res = await api.get(`/classrooms/${id}/cumulative-results`);
+      setCumulativeResults(res.data);
+    } catch (err) {
+      console.error(err);
+    }
   };
   const handleDownloadTemplate = async () => {
     const res = await api.get(`/classrooms/${id}/results/template`, { responseType: 'blob' });
@@ -560,93 +572,76 @@ export default function ClassroomView() {
 
       {/* RESULTS TAB */}
       {activeTab === 'Results' && (
-        <div className="space-y-6">
-          {user?.role === 'teacher' && classroom.teacherId?._id === user._id && (
-            <div className="glass-panel p-6 rounded-2xl grid md:grid-cols-2 gap-8 items-start border border-blue-500/30 bg-blue-500/5">
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                  <Download className="w-5 h-5 text-blue-400" /> 1. Generate Template
-                </h3>
-                <p className="text-slate-400 text-sm mb-4">Download a pre-filled Excel template containing all enrolled student details.</p>
-                <button onClick={handleDownloadTemplate} className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/10 transition-colors text-sm font-medium">
-                  Download XLSX Template
-                </button>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                  <Upload className="w-5 h-5 text-blue-400" /> 2. Upload Marks
-                </h3>
-                <p className="text-slate-400 text-sm mb-4">Upload the completed template to instantly publish calculated results.</p>
-                <form onSubmit={handleUploadResults} className="space-y-3">
-                  <input type="text" placeholder="Exam Label (e.g. Mid-Term 2025)" value={examName} onChange={e => setExamName(e.target.value)} required className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white text-sm outline-none focus:border-blue-500" />
-                  <input type="file" accept=".xlsx, .csv" onChange={e => setResultFile(e.target.files[0])} required className="w-full text-slate-300 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-300 hover:file:bg-indigo-500/30" />
-                  <button type="submit" className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors text-sm">
-                    Process Results
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {user?.role === 'student' && results.length > 0 && (
-            <div className="space-y-6">
-              {results.map(res => {
-                let overallGrade = 'F';
-                if (res.gpa >= 4.0) overallGrade = 'A+';
-                else if (res.gpa >= 3.7) overallGrade = 'A';
-                else if (res.gpa >= 3.3) overallGrade = 'A-';
-                else if (res.gpa >= 3.0) overallGrade = 'B';
-                else if (res.gpa >= 2.0) overallGrade = 'C';
-
-                return (
-                  <div key={res._id} className="glass-panel p-6 rounded-2xl overflow-hidden relative">
-                    <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full mr-[-40px] mt-[-40px] ${overallGrade === 'A+' || overallGrade === 'A' ? 'bg-green-500/30' : overallGrade === 'C' || overallGrade === 'F' ? 'bg-red-500/30' : 'bg-blue-500/30'}`}></div>
-                    
-                    <div className="flex justify-between items-end mb-6 relative z-10">
-                      <div>
-                        <h3 className="text-2xl font-bold text-white mb-1">{res.examName}</h3>
-                        <p className="text-slate-400">Published: {new Date(res.uploadedAt).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-black text-white">{res.gpa.toFixed(2)}</div>
-                        <div className={`text-lg font-bold ${overallGrade === 'A+' || overallGrade === 'A' ? 'text-green-400' : overallGrade === 'C' || overallGrade === 'F' ? 'text-red-400' : 'text-blue-400'}`}>
-                          Grade {overallGrade}
-                        </div>
-                      </div>
-                    </div>
-
-                    <table className="w-full text-left bg-black/20 rounded-xl overflow-hidden relative z-10">
-                      <thead>
-                        <tr className="border-b border-white/5 bg-black/40">
-                          <th className="p-3 text-slate-300 font-medium font-sm">Subject</th>
-                          <th className="p-3 text-slate-300 font-medium font-sm">Marks Extracted</th>
-                          <th className="p-3 text-slate-300 font-medium font-sm">Letter Grade</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {res.subjects.map((sub, i) => (
-                          <tr key={i}>
-                            <td className="p-3 font-medium text-white">{sub.name}</td>
-                            <td className="p-3 text-slate-300">{sub.marksObtained} / {sub.totalMarks}</td>
-                            <td className={`p-3 font-bold ${sub.grade.includes('A') ? 'text-green-400' : 'text-blue-400'}`}>{sub.grade}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {user?.role === 'student' && results.length === 0 && (
-            <p className="text-slate-500 text-center py-10">No results have been published for you yet.</p>
-          )}
-
-          {user?.role === 'teacher' && results.length > 0 && (
-             <div className="text-slate-400 text-center py-6 glass-panel rounded-xl">
-               Results are uploaded successfully. Use the <Link to="/gradesheet" className="text-blue-400 hover:underline">Global Gradesheet</Link> to search and view individual student histories.
+        <div className="space-y-6 animate-fade-in">
+          <div className="glass-panel p-6 rounded-2xl border border-white/5 flex items-center justify-between">
+             <div>
+                <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                   <Award className="w-5 h-5 text-blue-400"/> Comprehensive Academic Report
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">Automatically compiled from all subject gradebooks in real-time.</p>
              </div>
+          </div>
+
+          {cumulativeResults?.length > 0 ? (
+            <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden shadow-2xl relative z-10 w-full max-w-full">
+              <div className="overflow-x-auto custom-scrollbar w-full">
+                <table className="w-full text-left bg-black/40 min-w-max">
+                  <thead>
+                    <tr className="border-b border-white/5 bg-black/60">
+                      <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest border-r border-white/5 whitespace-nowrap sticky left-0 bg-[#0f0f1a] z-20 shadow-[2px_0_10px_rgba(0,0,0,0.5)]">Student Name</th>
+                      {/* Dynamic Subject Columns */}
+                      {Array.from(new Set(cumulativeResults.flatMap(res => res.subjectMarks.map(s => s.subjectName)))).map(subject => (
+                        <th key={subject} className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center border-r border-white/5 min-w-[120px]">{subject}</th>
+                      ))}
+                      <th className="p-4 text-[10px] font-black text-blue-400/70 uppercase tracking-widest text-center border-r border-white/5 min-w-[120px]">Grand Total</th>
+                      <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center border-r border-white/5">Percentage</th>
+                      <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center border-r border-white/5">GPA (Out of 5)</th>
+                      <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Final Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {cumulativeResults
+                      .filter(cr => user?.role === 'teacher' || user?.role === 'admin' || cr.studentId === user?._id)
+                      .map(res => {
+                        const uniqueSubjects = Array.from(new Set(cumulativeResults.flatMap(r => r.subjectMarks.map(s => s.subjectName))));
+                        return (
+                          <tr key={res.studentId} className="hover:bg-white/[0.02] transition-colors group">
+                            <td className="p-4 font-bold text-white border-r border-white/5 sticky left-0 bg-[#0f0f1a] group-hover:bg-[#1a1a29] transition-colors z-10 whitespace-nowrap shadow-[2px_0_10px_rgba(0,0,0,0.5)]">
+                              {res.name}
+                            </td>
+                            {uniqueSubjects.map(subject => {
+                               const subMark = res.subjectMarks.find(s => s.subjectName === subject);
+                               return (
+                                 <td key={subject} className={`p-4 font-bold text-center border-r border-white/5 ${subMark ? (subMark.marks < 33 ? 'text-red-400 bg-red-400/5' : 'text-slate-300') : 'text-slate-600'}`}>
+                                   {subMark ? `${subMark.marks}/${subMark.maxMarks}` : '-'}
+                                 </td>
+                               );
+                            })}
+                            <td className="p-4 font-black text-blue-400 text-center border-r border-white/5 bg-blue-500/5">
+                              {res.grandTotal}/{res.maxGrandTotal}
+                            </td>
+                            <td className="p-4 font-bold text-white text-center border-r border-white/5">
+                              {res.percentage}%
+                            </td>
+                            <td className="p-4 font-black text-white text-center border-r border-white/5">
+                              {res.gpa.toFixed(2)}
+                            </td>
+                            <td className="p-4 text-center">
+                              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${res.isFail ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'}`}>
+                                {res.isFail ? 'FAIL' : 'PASS'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-slate-500 text-center py-10 glass-panel rounded-2xl border border-white/5 italic">
+                No academic records processed yet. Grades must be configured and saved in the Subjects tab first.
+            </div>
           )}
         </div>
       )}
@@ -972,7 +967,9 @@ export default function ClassroomView() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                          {subjectGrades.map(sg => {
+                          {subjectGrades
+                            .filter(sg => user?.role === 'teacher' || user?.role === 'admin' || sg.studentId === user?._id)
+                            .map(sg => {
                             // Calculate weighted total for display
                             let total = 0;
                             gradeConfig.categories.forEach(cat => {

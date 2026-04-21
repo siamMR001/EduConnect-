@@ -89,7 +89,7 @@ const TeacherProfile = () => {
                 <div className="px-8 pb-8 flex flex-col md:flex-row items-center md:items-end gap-6 -mt-12">
                     <div className="relative group">
                         <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-[#1a1c2c] bg-slate-800 overflow-hidden shadow-2xl">
-                            {profile.profilePicture ? (
+                            {profile.profilePicture && currentUser?.role !== 'admin' && profile.employeeType !== 'admin' ? (
                                 <img src={`${import.meta.env.VITE_API_URL}${profile.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">

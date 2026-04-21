@@ -38,5 +38,6 @@ router.post('/assignments/:assignmentId/submit', protect, authorize('student'), 
 router.get('/:id/results/template', protect, authorize('teacher'), classroomController.downloadResultTemplate);
 router.post('/:id/results/upload', protect, authorize('teacher'), upload.single('file'), classroomController.uploadResults);
 router.get('/:id/results', protect, classroomController.getClassroomResults);
+router.get('/:id/cumulative-results', protect, classroomController.getCumulativeResults);
 
 module.exports = router;

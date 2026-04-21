@@ -400,11 +400,12 @@ exports.downloadResultTemplate = async (req, res) => {
 
 const calcGrade = (marks, total) => {
     const p = (marks / total) * 100;
-    if (p >= 90) return { grade: 'A+', points: 4.0 };
-    if (p >= 80) return { grade: 'A', points: 3.7 };
-    if (p >= 70) return { grade: 'A-', points: 3.3 };
-    if (p >= 60) return { grade: 'B', points: 3.0 };
-    if (p >= 50) return { grade: 'C', points: 2.0 };
+    if (p >= 80) return { grade: 'A+', points: 5.0 };
+    if (p >= 70) return { grade: 'A', points: 4.0 };
+    if (p >= 60) return { grade: 'A-', points: 3.5 };
+    if (p >= 50) return { grade: 'B', points: 3.0 };
+    if (p >= 40) return { grade: 'C', points: 2.0 };
+    if (p >= 33) return { grade: 'D', points: 1.0 };
     return { grade: 'F', points: 0.0 };
 };
 
@@ -509,6 +510,132 @@ exports.deleteResult = async (req, res) => {
         res.status(200).json({ message: 'Result deleted successfully' });
     } catch (error) {
          res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getCumulativeResults = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const classroom = await Classroom.findById(id).populate({
+            path: 'studentIds',
+            select: 'name studentProfile',
+            populate: {
+                path: 'studentProfile',
+                select: 'rollNumber studentId'
+            }
+        });
+        if (!classroom) return res.status(404).json({ message: 'Classroom not found' });
+
+        const SubjectGradeConfig = require('../models/SubjectGradeConfig');
+        const SubjectGrade = require('../models/SubjectGrade');
+
+        // Fetch all configs and grades for this classroom
+        const [configs, allGrades] = await Promise.all([
+            SubjectGradeConfig.find({ classroomId: id }),
+            SubjectGrade.find({ classroomId: id })
+        ]);
+
+        const classroomCourses = classroom.courses || [];
+        
+        // Map to store result per student
+        let studentResults = classroom.studentIds.map(student => {
+            const studentId = student._id.toString();
+            const subjectMarks = [];
+            let grandTotal = 0;
+            let maxGrandTotal = 0;
+            let hasFail = false;
+            let totalSubjectGPA = 0;
+            let subjectCount = 0;
+
+            const calculateSubjectGPA = (marks, total) => {
+                const p = (marks / total) * 100;
+                if (p >= 80) return 5.0;
+                if (p >= 70) return 4.0;
+                if (p >= 60) return 3.5;
+                if (p >= 50) return 3.0;
+                if (p >= 40) return 2.0;
+                if (p >= 33) return 1.0;
+                return 0.0;
+            };
+
+            const evaluateCourse = (courseId, courseName, maxPossible = 100) => {
+                const config = configs.find(c => c.courseId === courseId);
+                const grade = allGrades.find(g => g.courseId === courseId && g.studentId.toString() === studentId);
+                
+                let subjectScore = 0;
+                if (config && grade) {
+                    config.categories.forEach(cat => {
+                        const score = grade.scores?.get(cat.label) || 0;
+                        subjectScore += (score / cat.maxMarks) * cat.weight;
+                    });
+                }
+
+                if (subjectScore < 33) hasFail = true;
+
+                const subjectGpa = calculateSubjectGPA(subjectScore, 100);
+                totalSubjectGPA += subjectGpa;
+                subjectCount++;
+
+                subjectMarks.push({
+                    subjectName: courseName,
+                    marks: Math.round(subjectScore),
+                    maxMarks: maxPossible
+                });
+
+                grandTotal += subjectScore;
+                maxGrandTotal += maxPossible;
+            };
+
+            // Process each course
+            classroomCourses.forEach(course => {
+                evaluateCourse(course._id.toString(), course.courseName);
+            });
+
+            // Handle Lead Subject
+            if (classroom.leadSubject) {
+                evaluateCourse('lead', classroom.leadSubject);
+            }
+
+            const percentage = maxGrandTotal > 0 ? (grandTotal / maxGrandTotal) * 100 : 0;
+            const avgGpa = subjectCount > 0 ? totalSubjectGPA / subjectCount : 0.0;
+
+            const getLetterGrade = (g) => {
+                if (g >= 5.0) return 'A+';
+                if (g >= 4.0) return 'A';
+                if (g >= 3.5) return 'A-';
+                if (g >= 3.0) return 'B';
+                if (g >= 2.0) return 'C';
+                if (g >= 1.0) return 'D';
+                return 'F';
+            };
+
+            return {
+                studentId, // Internal User ID
+                officialStudentId: student.studentProfile?.studentId || '—',
+                rollNumber: student.studentProfile?.rollNumber || '—',
+                name: student.name,
+                subjectMarks,
+                grandTotal: Math.round(grandTotal),
+                maxGrandTotal,
+                percentage: percentage.toFixed(2),
+                gpa: avgGpa,
+                letterGrade: hasFail ? 'F' : getLetterGrade(avgGpa),
+                grade: hasFail ? 'FAIL' : 'PASS',
+                isFail: hasFail || avgGpa === 0
+            };
+        });
+
+        // Calculate Ranking based on Grand Total
+        const sortedResults = [...studentResults].sort((a, b) => b.grandTotal - a.grandTotal);
+        studentResults = studentResults.map(res => {
+            const rank = sortedResults.findIndex(s => s.studentId === res.studentId) + 1;
+            return { ...res, ranking: rank };
+        });
+
+        res.status(200).json(studentResults);
+    } catch (error) {
+        console.error('Error fetching cumulative results:', error);
+        res.status(500).json({ message: error.message });
     }
 };
 

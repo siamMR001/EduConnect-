@@ -9,8 +9,7 @@ router.get('/all-grades', gradeSectionController.getAllGradeConfigurations);
 router.get('/summary', gradeSectionController.getGradeSummary);
 router.get('/grade-config', gradeSectionController.getGradeConfiguration);
 router.patch('/:id', protect, authorize('admin'), gradeSectionController.updateGradeConfiguration);
-router.patch('/update-section-capacity', protect, authorize('admin'), gradeSectionController.updateSectionCapacity);
-
+router.patch('/update-section', protect, authorize('admin'), gradeSectionController.updateSection);
 // Student assignment routes
 router.post('/assign-student/:studentId', protect, authorize('admin'), gradeSectionController.assignStudentToSection);
 router.patch('/change-student-section', protect, authorize('admin'), gradeSectionController.changeStudentSection);

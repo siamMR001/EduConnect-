@@ -9,6 +9,7 @@ export default function Classrooms() {
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [studentProfile, setStudentProfile] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Modals
@@ -35,7 +36,17 @@ export default function Classrooms() {
     setUser(usr);
     fetchGradeSummary(academicYearFilter);
     if (usr?.role === 'admin') fetchTeachers();
+    if (usr?.role === 'student') fetchStudentProfile(usr._id);
   }, [academicYearFilter]);
+
+  const fetchStudentProfile = async (userId) => {
+    try {
+      const res = await api.get(`/students/user/${userId}`);
+      setStudentProfile(res.data);
+    } catch (err) {
+      console.error("Error fetching student profile:", err);
+    }
+  };
 
   // Handle URL changes for deep linking
   useEffect(() => {
@@ -304,7 +315,14 @@ export default function Classrooms() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.03]">
-              {gradeSummary.map((g) => (
+              {gradeSummary
+                .filter(g => {
+                  if (user?.role === 'student' && studentProfile) {
+                    return g.grade.toString() === studentProfile.currentClass.toString();
+                  }
+                  return true;
+                })
+                .map((g) => (
                 <tr 
                   key={g.grade} 
                   onClick={() => handleDrillDown(g)}
@@ -363,7 +381,14 @@ export default function Classrooms() {
       ) : (
         /* SECTION CARDS VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {selectedGrade.sections.map((c) => (
+          {selectedGrade.sections
+            .filter(s => {
+              if (user?.role === 'student' && studentProfile) {
+                return s.section === studentProfile.section;
+              }
+              return true;
+            })
+            .map((c) => (
             <div key={c._id} className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-all duration-300 shadow-xl">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors"></div>
               

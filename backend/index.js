@@ -17,7 +17,8 @@ app.use(cors({
     credentials: true
 }));
 app.use(cookieParser());
-app.use('/uploads', express.static('uploads'));
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Basic Route for testing
 app.get('/api/health', (req, res) => {
@@ -54,3 +55,4 @@ mongoose.connect(MONGO_URI)
     .catch((err) => {
         console.error('MongoDB connection error:', err);
     });
+// Restart triggered

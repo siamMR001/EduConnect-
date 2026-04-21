@@ -119,17 +119,41 @@ export default function Gradesheet() {
                 </tr>
               ) : (
                 results.map(res => {
-                  let overallGrade = 'F';
-                  if (res.gpa >= 4.0) overallGrade = 'A+';
-                  else if (res.gpa >= 3.7) overallGrade = 'A';
-                  else if (res.gpa >= 3.3) overallGrade = 'A-';
-                  else if (res.gpa >= 3.0) overallGrade = 'B';
-                  else if (res.gpa >= 2.0) overallGrade = 'C';
+                  // Calculate total marks and recalculate GPA for consistency (5.0 scale)
+                  let totalObtained = 0;
+                  let totalPossible = 0;
+                  let totalPoints = 0;
+                  let subjectCount = res.subjects.length;
+
+                  res.subjects.forEach(sub => {
+                    totalObtained += sub.marksObtained;
+                    totalPossible += sub.totalMarks;
+                    
+                    // Calc points on 5.0 scale
+                    const p = (sub.marksObtained / sub.totalMarks) * 100;
+                    if (p >= 80) totalPoints += 5.0;
+                    else if (p >= 70) totalPoints += 4.0;
+                    else if (p >= 60) totalPoints += 3.5;
+                    else if (p >= 50) totalPoints += 3.0;
+                    else if (p >= 40) totalPoints += 2.0;
+                    else if (p >= 33) totalPoints += 1.0;
+                    else totalPoints += 0.0;
+                  });
+
+                  const recalculatedGPA = subjectCount > 0 ? totalPoints / subjectCount : 0;
                   
+                  let overallGrade = 'F';
+                  if (recalculatedGPA >= 5.0) overallGrade = 'A+';
+                  else if (recalculatedGPA >= 4.0) overallGrade = 'A';
+                  else if (recalculatedGPA >= 3.5) overallGrade = 'A-';
+                  else if (recalculatedGPA >= 3.0) overallGrade = 'B';
+                  else if (recalculatedGPA >= 2.0) overallGrade = 'C';
+                  else if (recalculatedGPA >= 1.0) overallGrade = 'D';
+
                   return (
                     <tr key={res._id} className="hover:bg-white/5 transition-colors print:text-black">
                       <td className="p-4 font-medium text-white print:text-black">{res.examName}</td>
-                      <td className="p-4 text-slate-300 print:text-gray-700">
+                      <td className="p-4 text-slate-300 print:text-gray-700 font-bold">
                         {res.classroomId ? `${res.classroomId.name}` : 'N/A'}
                       </td>
                       {user?.role !== 'student' && (
@@ -138,26 +162,36 @@ export default function Gradesheet() {
                       <td className="p-4">
                         <div className="flex flex-wrap gap-2">
                           {res.subjects.map((sub, i) => (
-                            <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/30 border border-white/5 text-xs text-slate-300 print:border-gray-300 print:bg-white">
-                              <span className="text-white print:text-black font-medium">{sub.name}:</span>
-                              {sub.marksObtained}/{sub.totalMarks} <span className={`font-bold ${sub.grade.includes('A') ? 'text-green-400' : 'text-blue-400'}`}>{sub.grade}</span>
+                            <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5 text-xs text-slate-300 print:border-gray-300 print:bg-white">
+                              <span className="text-white print:text-black font-bold uppercase tracking-tighter">{sub.name}:</span>
+                              {sub.marksObtained}/{sub.totalMarks}
                             </span>
                           ))}
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-xl font-bold text-white print:text-black">{res.gpa.toFixed(2)}</span>
-                          <span className={`text-sm font-bold ${overallGrade.includes('A') ? 'text-green-400' : overallGrade === 'F' ? 'text-red-400' : 'text-blue-400'}`}>
-                            {overallGrade}
-                          </span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-slate-400 font-medium">Marks:</span>
+                            <span className="text-sm font-bold text-white print:text-black">{totalObtained} / {totalPossible}</span>
+                          </div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xl font-black text-primary-light print:text-black">{recalculatedGPA.toFixed(2)}</span>
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                              overallGrade.includes('A') ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
+                              overallGrade === 'F' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
+                              'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            }`}>
+                              {overallGrade}
+                            </span>
+                          </div>
                         </div>
                       </td>
                       {user?.role === 'admin' && (
                         <td className="p-4 text-right print:hidden">
                           <button 
                             onClick={() => handleDelete(res._id)}
-                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all border border-transparent hover:border-red-500/20"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

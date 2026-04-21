@@ -90,12 +90,12 @@ exports.getGradeConfiguration = async (req, res) => {
     }
 };
 
-// Update section max capacity (Admin only)
-exports.updateSectionCapacity = async (req, res) => {
+// Update section Max capacity and Name (Admin only)
+exports.updateSection = async (req, res) => {
     try {
-        const { grade, academicYear, sectionName, maxStudents } = req.body;
+        const { grade, academicYear, sectionName, newSectionName, maxStudents } = req.body;
 
-        if (!grade || !academicYear || !sectionName || !maxStudents) {
+        if (!grade || !academicYear || !sectionName || !maxStudents || !newSectionName) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
@@ -111,6 +111,23 @@ exports.updateSectionCapacity = async (req, res) => {
             return res.status(404).json({ message: 'Section not found' });
         }
 
+        if (newSectionName !== sectionName) {
+            const numericGradeStr = isNaN(parseInt(grade)) ? grade : parseInt(grade).toString();
+            const Classroom = mongoose.model('Classroom');
+            const StudentProfile = mongoose.model('StudentProfile');
+            
+            await Classroom.updateMany(
+                { classNumber: numericGradeStr, section: sectionName, academicYear },
+                { section: newSectionName, name: `Class ${numericGradeStr} - ${newSectionName}` }
+            );
+
+            await StudentProfile.updateMany(
+                { currentClass: numericGradeStr, section: sectionName, academicYear },
+                { section: newSectionName }
+            );
+        }
+
+        gradeConfig.sections[sectionIndex].sectionName = newSectionName;
         gradeConfig.sections[sectionIndex].maxStudents = maxStudents;
         gradeConfig.totalCapacity = gradeConfig.sections.reduce((sum, s) => sum + s.maxStudents, 0);
         gradeConfig.updatedAt = new Date();
@@ -118,12 +135,12 @@ exports.updateSectionCapacity = async (req, res) => {
         await gradeConfig.save();
 
         res.status(200).json({
-            message: 'Section capacity updated successfully',
+            message: 'Section updated successfully',
             gradeConfig
         });
     } catch (error) {
-        console.error('Error updating section capacity:', error);
-        res.status(500).json({ message: 'Error updating section capacity', error: error.message });
+        console.error('Error updating section:', error);
+        res.status(500).json({ message: 'Error updating section', error: error.message });
     }
 };
 

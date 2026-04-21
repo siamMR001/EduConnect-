@@ -17,7 +17,6 @@ import AdminStudentAssignment from './pages/AdminStudentAssignment';
 import TeacherProfile from './pages/TeacherProfile';
 import Classrooms from './pages/Classrooms';
 import ClassroomView from './pages/ClassroomView';
-import Gradesheet from './pages/Gradesheet';
 import AdminSettings from './pages/AdminSettings';
 
 function App() {
@@ -111,9 +110,6 @@ function App() {
                   <Link to="/classrooms" className="text-slate-300 hover:text-white font-medium transition-colors">
                     Classrooms
                   </Link>
-                  <Link to="/gradesheet" className="text-slate-300 hover:text-white font-medium transition-colors">
-                    Gradesheet
-                  </Link>
                 </div>
               </div>
               <div className="flex items-center gap-3 sm:gap-4">
@@ -175,7 +171,6 @@ function App() {
             <Route path="/teacher-registration" element={<TeacherRegister />} />
             <Route path="/classrooms" element={isLoggedIn ? <Classrooms /> : <Navigate to="/login" replace />} />
             <Route path="/classrooms/:id" element={isLoggedIn ? <ClassroomView /> : <Navigate to="/login" replace />} />
-            <Route path="/gradesheet" element={isLoggedIn ? <Gradesheet /> : <Navigate to="/login" replace />} />
             <Route path="/admin/teachers" element={isLoggedIn && user?.role === 'admin' ? <AdminTeacherDashboard /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/grades" element={isLoggedIn && user?.role === 'admin' ? <AdminGradeConfig /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/students" element={isLoggedIn && user?.role === 'admin' ? <AdminStudentAssignment /> : <Navigate to="/dashboard" replace />} />

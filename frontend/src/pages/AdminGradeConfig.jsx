@@ -53,12 +53,13 @@ export default function AdminGradeConfig() {
     }
   };
 
-  const handleUpdateCapacity = async (gradeId, sectionName, newCapacity) => {
+  const handleUpdateSection = async (gradeId, sectionName, newSectionName, newCapacity) => {
     try {
       const gradeConfig = grades.find(g => g._id === gradeId);
-      const result = await gradeService.updateSectionCapacity(
+      const result = await gradeService.updateSection(
         gradeConfig.grade,
         sectionName,
+        newSectionName,
         parseInt(newCapacity),
         academicYear
       );
@@ -117,6 +118,7 @@ export default function AdminGradeConfig() {
                 className="mt-1 w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500"
                 required
               />
+            </div>
             <div>
               <label className="text-slate-400 text-sm">Number of Sections</label>
               <select
@@ -232,23 +234,36 @@ export default function AdminGradeConfig() {
                           {isEditing ? (
                             <>
                               <input
-                                type="number"
-                                value={editingCapacity[`${editKey}-value`] || section.maxStudents}
+                                type="text"
+                                value={editingCapacity[`${editKey}-name`] || section.sectionName}
                                 onChange={(e) =>
                                   setEditingCapacity({
                                     ...editingCapacity,
-                                    [`${editKey}-value`]: e.target.value,
+                                    [`${editKey}-name`]: e.target.value,
                                   })
                                 }
-                                className="flex-1 px-2 py-1 bg-slate-700/50 border border-slate-600/50 rounded text-white text-sm"
+                                className="flex-1 w-1/2 px-2 py-1 bg-slate-700/50 border border-slate-600/50 rounded text-white text-sm"
+                                placeholder="Section"
+                              />
+                              <input
+                                type="number"
+                                value={editingCapacity[`${editKey}-capacity`] || section.maxStudents}
+                                onChange={(e) =>
+                                  setEditingCapacity({
+                                    ...editingCapacity,
+                                    [`${editKey}-capacity`]: e.target.value,
+                                  })
+                                }
+                                className="w-16 px-2 py-1 bg-slate-700/50 border border-slate-600/50 rounded text-white text-sm"
                                 min="1"
                               />
                               <button
                                 onClick={() =>
-                                  handleUpdateCapacity(
+                                  handleUpdateSection(
                                     gradeConfig._id,
                                     section.sectionName,
-                                    editingCapacity[`${editKey}-value`]
+                                    editingCapacity[`${editKey}-name`] || section.sectionName,
+                                    editingCapacity[`${editKey}-capacity`]
                                   )
                                 }
                                 className="p-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded transition-colors"
@@ -262,12 +277,13 @@ export default function AdminGradeConfig() {
                                 setEditingCapacity({
                                   ...editingCapacity,
                                   [editKey]: true,
-                                  [`${editKey}-value`]: section.maxStudents,
+                                  [`${editKey}-name`]: section.sectionName,
+                                  [`${editKey}-capacity`]: section.maxStudents,
                                 })
                               }
                               className="w-full px-3 py-1 text-slate-400 hover:text-white text-sm border border-slate-600/30 hover:border-slate-600/50 rounded transition-colors"
                             >
-                              Edit Capacity
+                              Edit Section
                             </button>
                           )}
                         </div>
