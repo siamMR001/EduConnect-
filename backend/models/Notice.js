@@ -34,5 +34,13 @@ const noticeSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+// Add indexes for performance optimization
+// Compound index covers both date and expiryDate queries
+noticeSchema.index({ date: 1, expiryDate: 1 });
+noticeSchema.index({ category: 1 });
+noticeSchema.index({ author: 1 });
+noticeSchema.index({ isActive: 1 });
+noticeSchema.index({ createdAt: -1 }); // For sorting recent notices
+
 const Notice = mongoose.model('Notice', noticeSchema);
 module.exports = Notice;

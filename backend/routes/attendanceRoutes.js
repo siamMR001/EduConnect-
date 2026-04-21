@@ -5,6 +5,7 @@ const attendanceController = require('../controllers/attendanceController');
 
 router.post('/mark/:classroomId', protect, authorize('teacher', 'admin'), attendanceController.markAttendance);
 router.get('/classroom/:classroomId', protect, attendanceController.getClassroomAttendance);
+router.get('/summary/:classroomId', protect, attendanceController.getClassroomSummary);
 router.get('/stats/:classroomId/:studentId', protect, attendanceController.getStudentStats);
 
 module.exports = router;
