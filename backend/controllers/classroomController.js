@@ -195,7 +195,7 @@ exports.createPost = async (req, res) => {
         const classroom = await Classroom.findById(req.params.id);
         if (!classroom) return res.status(404).json({ message: 'Classroom not found' });
         
-        if (req.user.role !== 'teacher' || classroom.teacherId.toString() !== req.user._id.toString()) {
+        if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
@@ -255,6 +255,29 @@ exports.deletePost = async (req, res) => {
     }
 };
 
+exports.updatePost = async (req, res) => {
+    try {
+        const { title, body, attachmentUrl } = req.body;
+        const post = await Post.findById(req.params.postId);
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+        
+        // Authorization: Only the author can edit
+        if (post.teacherId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to edit this post' });
+        }
+
+        if (title !== undefined) post.title = title;
+        if (body !== undefined) post.body = body;
+        if (attachmentUrl !== undefined) post.attachmentUrl = attachmentUrl;
+        
+        await post.save();
+        res.status(200).json(post);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
 exports.createComment = async (req, res) => {
     try {
         const { text } = req.body;
@@ -287,6 +310,27 @@ exports.deleteComment = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.updateComment = async (req, res) => {
+    try {
+        const { text } = req.body;
+        const comment = await Comment.findById(req.params.commentId);
+        if (!comment) return res.status(404).json({ message: 'Comment not found' });
+        
+        // Authorization: Only the author can edit
+        if (comment.authorId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to edit this comment' });
+        }
+
+        if (text !== undefined) comment.text = text;
+        
+        await comment.save();
+        res.status(200).json(comment);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 
 // --- Assignments ---
 // Note: Handled by extending existing Assignment routes/controllers or here

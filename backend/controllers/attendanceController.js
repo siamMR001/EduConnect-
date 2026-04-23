@@ -20,8 +20,8 @@ exports.markAttendance = async (req, res) => {
         const classroom = await Classroom.findById(classroomId);
         if (!classroom) return res.status(404).json({ message: 'Classroom not found' });
 
-        // Authorization check
-        if (req.user.role !== 'admin' && classroom.teacherId.toString() !== req.user._id.toString()) {
+        // Authorization check: Allow any teacher or admin
+        if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
             return res.status(403).json({ message: 'Not authorized to mark attendance for this class' });
         }
 
@@ -147,11 +147,10 @@ exports.getClassroomSummary = async (req, res) => {
             });
         if (!classroom) return res.status(404).json({ message: 'Classroom not found' });
 
-        // Authorization check: Admin, Teacher of class, or Student in class
+        // Authorization check: Admin, Any Teacher, or Student in class
         const isStudentInClass = classroom.studentIds.some(s => s._id.toString() === req.user._id.toString());
-        const isTeacherOfClass = classroom.teacherId.toString() === req.user._id.toString();
         
-        if (req.user.role !== 'admin' && !isTeacherOfClass && !isStudentInClass) {
+        if (req.user.role !== 'admin' && req.user.role !== 'teacher' && !isStudentInClass) {
             return res.status(403).json({ message: 'Not authorized to view this record' });
         }
 

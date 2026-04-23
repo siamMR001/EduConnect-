@@ -2,6 +2,7 @@ const Submission = require('../models/Submission');
 const Assignment = require('../models/Assignment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const Classroom = require('../models/Classroom');
 const fs = require('fs');
 const path = require('path');
 
@@ -66,7 +67,7 @@ exports.submitAssignment = async (req, res) => {
                 title: `New Submission: ${assignment.title}`,
                 message: `${req.user.name} submitted the assignment "${assignment.title}"${isLate ? ' (LATE)' : ''}`,
                 type: 'submission',
-                recipients: [assignment.createdBy],
+                recipient: assignment.createdBy,
                 relatedId: submission._id,
                 priority: isLate ? 'high' : 'normal'
             });
@@ -142,9 +143,33 @@ exports.gradeSubmission = async (req, res) => {
 
         const assignment = await Assignment.findById(submission.assignment);
 
-        // Check authorization
-        if (assignment.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-            return res.status(403).json({ message: 'Not authorized to grade submissions' });
+        // --- NEW AUTHORIZATION LOGIC ---
+        let isAuthorized = false;
+
+        if (req.user.role === 'admin') {
+            isAuthorized = true;
+        } else {
+            // Check 1: Is the user the direct creator?
+            const isCreator = assignment.createdBy.toString() === req.user._id.toString();
+            
+            // Check 2: Is the user a teacher in the classroom this assignment belongs to?
+            let isClassTeacher = false;
+            if (assignment.classroomId) {
+                const classroom = await Classroom.findById(assignment.classroomId);
+                if (classroom) {
+                    isClassTeacher = 
+                        classroom.teacherId?.toString() === req.user._id.toString() ||
+                        (classroom.courses || []).some(c => c.teacherId?.toString() === req.user._id.toString());
+                }
+            }
+
+            if (isCreator || isClassTeacher) {
+                isAuthorized = true;
+            }
+        }
+
+        if (!isAuthorized) {
+            return res.status(403).json({ message: 'Not authorized to grade this submission' });
         }
 
         // Validate marks
@@ -170,7 +195,7 @@ exports.gradeSubmission = async (req, res) => {
                 title: `Assignment Graded: ${assignment.title}`,
                 message: `Your assignment has been graded. Marks: ${marksObtained}/${assignment.totalMarks}`,
                 type: 'graded',
-                recipients: [submission.student],
+                recipient: submission.student,
                 relatedId: submission._id,
                 priority: 'normal'
             });

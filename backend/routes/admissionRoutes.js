@@ -183,7 +183,8 @@ router.patch('/approve-all-pending', async (req, res) => {
         let approvedCount = 0;
         for (const app of pendingApps) {
             await shiftToStudentProfile(app);
-            await Admission.findByIdAndDelete(app._id);
+            app.status = 'approved';
+            await app.save();
             approvedCount++;
         }
 
@@ -206,8 +207,9 @@ router.patch('/:id/status', async (req, res) => {
 
         if (status === 'approved') {
             await shiftToStudentProfile(application);
-            await Admission.findByIdAndDelete(application._id);
-            return res.json({ message: 'Application approved and shifted to Student Profiles.', application: { ...application.toObject(), status: 'approved' } });
+            application.status = 'approved';
+            await application.save();
+            return res.json({ message: 'Application approved and shifted to Student Profiles.', application });
         }
 
         // If rejected or pending, keep in admissions and just update status

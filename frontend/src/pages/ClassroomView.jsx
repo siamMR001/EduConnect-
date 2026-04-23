@@ -24,6 +24,11 @@ export default function ClassroomView() {
   const [postTitle, setPostTitle] = useState('');
   const [postBody, setPostBody] = useState('');
   const [postAttachment, setPostAttachment] = useState('');
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editPostData, setEditPostData] = useState({ title: '', body: '', attachmentUrl: '' });
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState('');
+
   
   // Assignments
   const [assignments, setAssignments] = useState([]);
@@ -190,6 +195,15 @@ export default function ClassroomView() {
     setPostTitle(''); setPostBody(''); setPostAttachment('');
     fetchPosts();
   };
+  const handleUpdatePost = async (e) => {
+    e.preventDefault();
+    try {
+      await api.patch(`/classrooms/posts/${editingPostId}`, editPostData);
+      setEditingPostId(null);
+      fetchPosts();
+    } catch (err) { alert('Error updating post'); }
+  };
+
   const handleDeletePost = async (postId) => {
     if (!window.confirm("Delete post?")) return;
     await api.delete(`/classrooms/posts/${postId}`);
@@ -200,10 +214,19 @@ export default function ClassroomView() {
     await api.post(`/classrooms/posts/${postId}/comments`, { text });
     fetchPosts();
   };
+  const handleUpdateComment = async (e, commentId) => {
+    e.preventDefault();
+    try {
+      await api.patch(`/classrooms/comments/${commentId}`, { text: editCommentText });
+      setEditingCommentId(null);
+      fetchPosts();
+    } catch (err) { alert('Error updating comment'); }
+  };
   const handleDeleteComment = async (commentId) => {
     await api.delete(`/classrooms/comments/${commentId}`);
     fetchPosts();
   };
+
 
   // --- Assignments Logic ---
   const fetchAssignments = async () => {
@@ -378,7 +401,7 @@ export default function ClassroomView() {
       {/* FEED TAB */}
       {activeTab === 'Feed' && (
         <div className="space-y-6">
-          {user?.role === 'teacher' && classroom.teacherId?._id === user._id && (
+          {(user?.role === 'teacher' || user?.role === 'admin') && (
             <form onSubmit={handlePost} className="glass-panel p-5 rounded-2xl space-y-4">
               <input 
                 type="text" placeholder="Announcement Title" required value={postTitle} onChange={e => setPostTitle(e.target.value)}
@@ -403,19 +426,62 @@ export default function ClassroomView() {
           <div className="space-y-6">
             {posts.map(post => (
               <div key={post._id} className="glass-panel rounded-2xl p-6 relative group">
-                {user?.role === 'teacher' && user._id === post.teacherId?._id && (
-                  <button onClick={() => handleDeletePost(post._id)} className="absolute top-4 right-4 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                )}
-                
-                <h3 className="text-xl font-bold text-white mb-2">{post.title}</h3>
-                <p className="text-sm text-blue-400 mb-4">{post.teacherId?.name} &bull; {new Date(post.createdAt).toLocaleDateString()}</p>
-                <div className="text-slate-300 leading-relaxed mb-4 whitespace-pre-wrap">{post.body}</div>
-                {post.attachmentUrl && (
-                  <a href={post.attachmentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-blue-400 hover:bg-white/10 transition-colors text-sm mb-6">
-                    <Paperclip className="w-4 h-4" /> View Attachment
-                  </a>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-blue-400">{post.teacherId?.name} &bull; {new Date(post.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  {user?._id === post.teacherId?._id && (
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => {
+                          setEditingPostId(post._id);
+                          setEditPostData({ title: post.title, body: post.body, attachmentUrl: post.attachmentUrl || '' });
+                        }} 
+                        className="p-1.5 text-slate-500 hover:text-blue-400 hover:bg-white/5 rounded-lg transition-all"
+                        title="Edit Post"
+                      >
+                        <Edit3 className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeletePost(post._id)} 
+                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-white/5 rounded-lg transition-all"
+                        title="Delete Post"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {editingPostId === post._id ? (
+                  <form onSubmit={handleUpdatePost} className="space-y-4 mb-4 bg-black/20 p-4 rounded-xl border border-white/5">
+                    <input 
+                      type="text" value={editPostData.title} onChange={e => setEditPostData({...editPostData, title: e.target.value})}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:ring-1 focus:ring-blue-500 font-semibold"
+                    />
+                    <textarea 
+                      value={editPostData.body} onChange={e => setEditPostData({...editPostData, body: e.target.value})}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:ring-1 focus:ring-blue-500 min-h-[100px]"
+                    />
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" placeholder="Attachment URL" value={editPostData.attachmentUrl} onChange={e => setEditPostData({...editPostData, attachmentUrl: e.target.value})}
+                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white outline-none text-sm"
+                      />
+                      <button type="submit" className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-white text-sm font-medium transition-colors">Save</button>
+                      <button type="button" onClick={() => setEditingPostId(null)} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-slate-300 text-sm transition-colors">Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <h3 className="text-xl font-bold text-white mb-2">{post.title}</h3>
+                    <div className="text-slate-300 leading-relaxed mb-4 whitespace-pre-wrap">{post.body}</div>
+                    {post.attachmentUrl && (
+                      <a href={post.attachmentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-blue-400 hover:bg-white/10 transition-colors text-sm mb-6">
+                        <Paperclip className="w-4 h-4" /> View Attachment
+                      </a>
+                    )}
+                  </>
                 )}
 
                 <div className="mt-4 pt-4 border-t border-white/5 space-y-4">
@@ -425,18 +491,53 @@ export default function ClassroomView() {
                         {c.authorId?.name?.charAt(0) || 'U'}
                       </div>
                       <div className="flex-1 bg-black/20 rounded-xl p-3 relative">
-                        <span className="font-semibold text-slate-200 block mb-1">{c.authorId?.name}</span>
-                        <span className="text-slate-400">{c.text}</span>
-                        {c.authorId?._id === user._id && (
-                          <button onClick={() => handleDeleteComment(c._id)} className="absolute top-3 right-3 text-slate-500 hover:text-red-400 opacity-0 group-hover/comment:opacity-100 transition-opacity">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-slate-200">{c.authorId?.name}</span>
+                          <div className="flex items-center gap-2">
+                            {user?.role !== 'student' && (
+                              <button 
+                                onClick={() => {
+                                  const input = document.getElementById(`comment-input-${post._id}`);
+                                  if (input) {
+                                    input.value = `Reply to @${c.authorId?.name}: `;
+                                    input.focus();
+                                  }
+                                }} 
+                                className="text-blue-400 hover:text-blue-300 text-[10px] uppercase font-bold tracking-wider opacity-0 group-hover/comment:opacity-100 transition-opacity"
+                              >
+                                Reply
+                              </button>
+                            )}
+                            {c.authorId?._id === user?._id && !editingCommentId && (
+                              <div className="flex items-center gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+                                <button onClick={() => { setEditingCommentId(c._id); setEditCommentText(c.text); }} className="text-slate-500 hover:text-blue-400 transition-colors">
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => handleDeleteComment(c._id)} className="text-slate-500 hover:text-red-400 transition-colors">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {editingCommentId === c._id ? (
+                          <form onSubmit={(e) => handleUpdateComment(e, c._id)} className="flex gap-2 mt-1">
+                            <input 
+                              autoFocus value={editCommentText} onChange={e => setEditCommentText(e.target.value)}
+                              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-white text-sm outline-none focus:border-blue-500/50"
+                            />
+                            <button type="submit" className="text-green-400 hover:text-green-300 text-xs font-medium">Save</button>
+                            <button type="button" onClick={() => setEditingCommentId(null)} className="text-slate-500 hover:text-slate-400 text-xs font-medium">Cancel</button>
+                          </form>
+                        ) : (
+                          <span className="text-slate-400">{c.text}</span>
                         )}
                       </div>
                     </div>
                   ))}
                   
-                  {user?.role === 'student' && (
+                  {user?._id && (
                     <form 
                       onSubmit={e => {
                         e.preventDefault();
@@ -447,6 +548,7 @@ export default function ClassroomView() {
                       className="flex gap-3 relative mt-2 text-sm"
                     >
                       <input 
+                        id={`comment-input-${post._id}`}
                         name="comment" type="text" placeholder="Add a class comment..."
                         className="flex-1 bg-black/40 border border-white/10 rounded-full pl-5 pr-12 py-2.5 text-white outline-none focus:border-blue-500/50 transition-all"
                       />
@@ -516,6 +618,44 @@ export default function ClassroomView() {
                     )}
                   </div>
                   <p className="text-slate-300 mt-4 mb-4">{a.description}</p>
+                  
+                  {user?.role === 'student' && a.userSubmission && (
+                    <div className="bg-black/40 rounded-2xl p-5 border border-white/5 space-y-4 mb-4">
+                      <div className="flex justify-between items-center">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Your Submission</p>
+                        {a.userSubmission.status === 'graded' && a.userSubmission.marksObtained !== null && (
+                          <div className="flex items-center gap-2">
+                             <Award className="w-4 h-4 text-green-400" />
+                             <span className="text-lg font-black text-white">{a.userSubmission.marksObtained} <span className="text-slate-500 text-xs">/ {a.totalMarks}</span></span>
+                          </div>
+                        )}
+                      </div>
+
+                      {a.userSubmission.submittedFiles && a.userSubmission.submittedFiles.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {a.userSubmission.submittedFiles.map((file, idx) => (
+                            <a 
+                              key={idx} 
+                              href={file.path.startsWith('/uploads') ? `${baseUrl}${file.path}` : file.path}
+                              target="_blank" rel="noreferrer"
+                              className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs text-slate-300 flex items-center gap-2 transition-all"
+                            >
+                              <Download className="w-3 h-3" /> {file.filename}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      {a.userSubmission.feedback && (
+                        <div className="pt-3 border-t border-white/5">
+                           <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                              <MessageSquare className="w-3 h-3" /> Teacher Feedback
+                           </p>
+                           <p className="text-sm text-slate-300 italic">"{a.userSubmission.feedback}"</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   {a.attachmentUrl && (
                     <a href={a.attachmentUrl} target="_blank" rel="noreferrer" className="text-blue-400 text-sm hover:underline mb-4 inline-block">Attached Resource</a>
@@ -634,7 +774,93 @@ export default function ClassroomView() {
                 </h2>
                 <p className="text-slate-400 text-sm mt-1">Automatically compiled from all subject gradebooks in real-time.</p>
              </div>
+             {(user?.role === 'teacher' || user?.role === 'admin') && (
+                <button onClick={handleDownloadTemplate} className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl border border-white/10 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                   <Download className="w-4 h-4" /> Template
+                </button>
+             )}
           </div>
+
+          {(user?.role === 'teacher' || user?.role === 'admin') && (
+            <div className="glass-panel p-6 rounded-2xl border border-blue-500/20 bg-blue-500/5">
+                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-blue-400" /> External Result Upload
+                </h3>
+                <form onSubmit={handleUploadResults} className="flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Exam Label</label>
+                    <input type="text" placeholder="e.g. Mid-Term 2025" value={examName} onChange={e => setExamName(e.target.value)} required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500" />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Result File (XLSX)</label>
+                    <input type="file" accept=".xlsx, .csv" onChange={e => setResultFile(e.target.files[0])} required className="w-full text-slate-400 text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-blue-500/20 file:text-blue-400 hover:file:bg-blue-500/30" />
+                  </div>
+                  <button type="submit" className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] transition-colors">
+                    Upload & Process
+                  </button>
+                </form>
+            </div>
+          )}
+
+          {user?.role === 'student' && results.length > 0 && (
+            <div className="space-y-6">
+              {results.map(res => {
+                let overallGrade = 'F';
+                if (res.gpa >= 4.0) overallGrade = 'A+';
+                else if (res.gpa >= 3.7) overallGrade = 'A';
+                else if (res.gpa >= 3.3) overallGrade = 'A-';
+                else if (res.gpa >= 3.0) overallGrade = 'B';
+                else if (res.gpa >= 2.0) overallGrade = 'C';
+
+                return (
+                  <div key={res._id} className="glass-panel p-6 rounded-2xl overflow-hidden relative">
+                    <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full mr-[-40px] mt-[-40px] ${overallGrade === 'A+' || overallGrade === 'A' ? 'bg-green-500/30' : overallGrade === 'C' || overallGrade === 'F' ? 'bg-red-500/30' : 'bg-blue-500/30'}`}></div>
+                    
+                    <div className="flex justify-between items-end mb-6 relative z-10">
+                      <div>
+                        <h3 className="text-2xl font-bold text-white mb-1">{res.examName}</h3>
+                        <p className="text-slate-400">Published: {new Date(res.uploadedAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-black text-white">{res.gpa.toFixed(2)}</div>
+                        <div className={`text-lg font-bold ${overallGrade === 'A+' || overallGrade === 'A' ? 'text-green-400' : overallGrade === 'C' || overallGrade === 'F' ? 'text-red-400' : 'text-blue-400'}`}>
+                          Grade {overallGrade}
+                        </div>
+                      </div>
+                    </div>
+
+                    <table className="w-full text-left bg-black/20 rounded-xl overflow-hidden relative z-10">
+                      <thead>
+                        <tr className="border-b border-white/5 bg-black/40">
+                          <th className="p-3 text-slate-300 font-medium font-sm">Subject</th>
+                          <th className="p-3 text-slate-300 font-medium font-sm">Marks Extracted</th>
+                          <th className="p-3 text-slate-300 font-medium font-sm">Letter Grade</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {res.subjects.map((sub, i) => (
+                          <tr key={i}>
+                            <td className="p-3 font-medium text-white">{sub.name}</td>
+                            <td className="p-3 text-slate-300">{sub.marksObtained} / {sub.totalMarks}</td>
+                            <td className={`p-3 font-bold ${sub.grade.includes('A') ? 'text-green-400' : 'text-blue-400'}`}>{sub.grade}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {user?.role === 'student' && results.length === 0 && (
+            <p className="text-slate-500 text-center py-10">No results have been published for you yet.</p>
+          )}
+
+          {user?.role === 'teacher' && results.length > 0 && (
+             <div className="text-slate-400 text-center py-6 glass-panel rounded-xl">
+               Results are uploaded successfully. Use the <Link to="/gradesheet" className="text-blue-400 hover:underline">Global Gradesheet</Link> to search and view individual student histories.
+             </div>
+          )}
 
           {cumulativeResults?.length > 0 ? (
             <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden shadow-2xl relative z-10 w-full max-w-full">

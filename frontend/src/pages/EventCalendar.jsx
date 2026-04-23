@@ -24,7 +24,8 @@ export default function EventCalendar() {
         location: '',
         category: 'academic',
         targetRole: 'all',
-        capacity: ''
+        capacity: '',
+        link: ''
     });
 
     const categories = ['academic', 'sports', 'club', 'holiday', 'cultural', 'other'];
@@ -150,7 +151,8 @@ export default function EventCalendar() {
                 location: '',
                 category: 'academic',
                 targetRole: 'all',
-                capacity: ''
+                capacity: '',
+                link: ''
             });
             fetchCalendarData();
         } catch (error) {
@@ -199,9 +201,19 @@ export default function EventCalendar() {
         <div className="max-w-7xl mx-auto py-8 px-4">
             {/* Header */}
             <div className="mb-8">
-                <div className="flex items-center gap-3 mb-6">
-                    <Calendar className="w-8 h-8 text-primary-light" />
-                    <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white">Academic Calendar</h1>
+                <div className="flex items-center justify-between gap-3 mb-6">
+                    <div className="flex items-center gap-3">
+                        <Calendar className="w-8 h-8 text-primary-light" />
+                        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white">Academic Calendar</h1>
+                    </div>
+                    {user?.role === 'admin' && (
+                        <button 
+                            onClick={() => setShowCreateForm(true)}
+                            className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105"
+                        >
+                            <Plus size={20} /> Create Event
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -487,6 +499,19 @@ export default function EventCalendar() {
                                     </div>
                                 )}
 
+                                {itemType === 'event' && selectedItem.link && (
+                                    <div className="pt-2">
+                                        <a 
+                                            href={selectedItem.link.startsWith('http') ? selectedItem.link : `https://${selectedItem.link}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-600/30 transition-all text-sm font-bold"
+                                        >
+                                            🖇️ View Resource Link
+                                        </a>
+                                    </div>
+                                )}
+
                                 {itemType === 'notice' && selectedItem.expiryDate && (
                                     <div className="text-xs text-slate-400">
                                         Expires: {new Date(selectedItem.expiryDate).toLocaleDateString()}
@@ -506,6 +531,138 @@ export default function EventCalendar() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Event Modal */}
+            {showCreateForm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
+                    <div className="bg-[#0f0f1a] border border-white/10 rounded-[40px] p-8 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-8">
+                           <h2 className="text-3xl font-black text-white">Create Event</h2>
+                           <button onClick={() => setShowCreateForm(false)} className="p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                        </div>
+                        <form onSubmit={handleCreateEvent} className="space-y-6">
+                            <div>
+                                <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Event Title</label>
+                                <input 
+                                    type="text" required value={formData.title} 
+                                    onChange={e => setFormData({...formData, title: e.target.value})}
+                                    placeholder="e.g. Science Fair 2026"
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Category</label>
+                                    <select 
+                                        value={formData.category}
+                                        onChange={e => setFormData({...formData, category: e.target.value})}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat} value={cat} className="bg-[#0f0f1a]">{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Target Audience</label>
+                                    <select 
+                                        value={formData.targetRole}
+                                        onChange={e => setFormData({...formData, targetRole: e.target.value})}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                    >
+                                        {targetRoles.map(role => (
+                                            <option key={role} value={role} className="bg-[#0f0f1a]">{role.charAt(0).toUpperCase() + role.slice(1)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Start Date</label>
+                                    <input 
+                                        type="date" required value={formData.date}
+                                        onChange={e => setFormData({...formData, date: e.target.value})}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">End Date (Optional)</label>
+                                    <input 
+                                        type="date" value={formData.endDate}
+                                        onChange={e => setFormData({...formData, endDate: e.target.value})}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Time & Location</label>
+                                    <div className="flex gap-4">
+                                        <input 
+                                            type="time" value={formData.time}
+                                            onChange={e => setFormData({...formData, time: e.target.value})}
+                                            className="w-1/2 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                        />
+                                        <input 
+                                            type="text" value={formData.location}
+                                            onChange={e => setFormData({...formData, location: e.target.value})}
+                                            placeholder="Room or Hall"
+                                            className="w-1/2 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Capacity (Optional)</label>
+                                    <input 
+                                        type="number" value={formData.capacity}
+                                        onChange={e => setFormData({...formData, capacity: e.target.value})}
+                                        placeholder="Max participants"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Description</label>
+                                <textarea 
+                                    value={formData.description}
+                                    onChange={e => setFormData({...formData, description: e.target.value})}
+                                    placeholder="Enter event details..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-3xl px-5 py-4 text-white font-medium outline-none focus:border-primary min-h-[120px] transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-slate-500 text-[10px] font-black uppercase tracking-widest mb-3">Event Link / Resource (Optional)</label>
+                                <input 
+                                    type="url" value={formData.link} 
+                                    onChange={e => setFormData({...formData, link: e.target.value})}
+                                    placeholder="https://meet.google.com/..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-primary transition-all"
+                                />
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button 
+                                    type="button" onClick={() => setShowCreateForm(false)}
+                                    className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit"
+                                    className="flex-1 py-4 bg-gradient-to-r from-primary to-primary-dark text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                >
+                                    Publish Event
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

@@ -25,8 +25,10 @@ router.post('/:id/enroll', protect, authorize('admin', 'teacher'), classroomCont
 // --- Feed ---
 router.post('/:id/posts', protect, authorize('teacher'), classroomController.createPost);
 router.get('/:id/posts', protect, classroomController.getPosts);
+router.patch('/posts/:postId', protect, authorize('teacher'), classroomController.updatePost);
 router.delete('/posts/:postId', protect, authorize('teacher'), classroomController.deletePost);
 router.post('/posts/:postId/comments', protect, classroomController.createComment);
+router.patch('/comments/:commentId', protect, classroomController.updateComment);
 router.delete('/comments/:commentId', protect, classroomController.deleteComment);
 
 // --- Assignments ---

@@ -93,11 +93,11 @@ exports.getStudentAssignments = async (req, res) => {
                 return {
                     ...assignment.toObject(),
                     submission: submission ? {
-                        status: submission.status,
+                        status: submission.status || 'submitted',
                         submittedAt: submission.submittedAt,
                         isLate: submission.isLate,
-                        marksObtained: submission.marksObtained,
-                        feedback: submission.feedback
+                        marksObtained: (submission.marksObtained !== undefined) ? submission.marksObtained : null,
+                        feedback: submission.feedback || ''
                     } : null
                 };
             })

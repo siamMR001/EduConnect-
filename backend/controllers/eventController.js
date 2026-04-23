@@ -20,7 +20,7 @@ exports.getAllEvents = async (req, res) => {
         const skip = (page - 1) * limit;
 
         const events = await Event.find(filter)
-            .select('title date endDate category location organizer time capacity')
+            .select('title date endDate category location organizer time capacity link')
             .populate('organizer', 'name role')
             .sort({ date: 1 })
             .skip(skip)
@@ -226,7 +226,7 @@ exports.getEventsForMonth = async (req, res) => {
                 { date: { $lt: startDate }, endDate: { $gt: endDate } }  // spans entire month
             ]
         })
-            .select('title date endDate category location organizer time capacity')
+            .select('title date endDate category location organizer time capacity link')
             .populate('organizer', 'name')
             .sort({ date: 1 })
             .lean();  // lean() returns plain JS objects, much faster

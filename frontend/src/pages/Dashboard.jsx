@@ -22,7 +22,7 @@ const Dashboard = () => {
     const [newNotice, setNewNotice] = useState({ title: '', content: '', priority: 'normal', targetRole: 'all', date: '' });
     const [newEvent, setNewEvent] = useState({
         title: '', description: '', date: '', endDate: '', time: '',
-        location: '', category: 'academic', targetRole: 'all', capacity: ''
+        location: '', category: 'academic', targetRole: 'all', capacity: '', link: ''
     });
 
     // Edit state
@@ -253,7 +253,7 @@ const Dashboard = () => {
                 const responseData = await res.json();
                 setEvents([...events, responseData.event].sort((a, b) => new Date(a.date) - new Date(b.date)));
                 setShowEventModal(false);
-                setNewEvent({ title: '', description: '', date: '', endDate: '', time: '', location: '', category: 'academic', targetRole: 'all', capacity: '' });
+                setNewEvent({ title: '', description: '', date: '', endDate: '', time: '', location: '', category: 'academic', targetRole: 'all', capacity: '', link: '' });
             } else {
                 alert("Failed to create event.");
             }
@@ -309,7 +309,7 @@ const Dashboard = () => {
                     title: editingEvent.title,
                     description: editingEvent.description,
                     date: editingEvent.date,
-                    type: editingEvent.type,
+                    category: editingEvent.category,
                     link: editingEvent.link
                 })
             });
@@ -490,7 +490,7 @@ const Dashboard = () => {
                                             <div key={evt._id || evt.id} className="group flex gap-4 items-start p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 cursor-pointer relative">
                                                 {user.role === 'admin' && (
                                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                                        <button onClick={(e) => { e.stopPropagation(); setEditingEvent({ ...evt, date: new Date(evt.date).toISOString().slice(0, 16) }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
+                                                        <button onClick={(e) => { e.stopPropagation(); setEditingEvent({ ...evt, date: new Date(evt.date).toISOString().slice(0, 16), category: evt.category || 'academic' }); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary-light transition-colors">
                                                             <Pencil size={14} />
                                                         </button>
                                                         <button
@@ -813,6 +813,10 @@ const Dashboard = () => {
                                 <label className="block text-slate-400 text-sm font-semibold mb-2">Capacity (Optional)</label>
                                 <input type="number" min="1" value={newEvent.capacity} onChange={e => setNewEvent({ ...newEvent, capacity: e.target.value })} className="form-input w-full" placeholder="Maximum participants" />
                             </div>
+                            <div>
+                                <label className="block text-slate-400 text-sm font-semibold mb-2">Event Link (Optional)</label>
+                                <input type="url" value={newEvent.link} onChange={e => setNewEvent({ ...newEvent, link: e.target.value })} className="form-input w-full" placeholder="https://meet.google.com/..." />
+                            </div>
                             <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-white/10">
                                 <button type="button" onClick={() => setShowEventModal(false)} className="btn-secondary py-2 px-6">Cancel</button>
                                 <button type="submit" className="btn-primary py-2 px-6">Create Event</button>
@@ -915,12 +919,13 @@ const Dashboard = () => {
                                     <input type="datetime-local" required value={editingEvent.date} onChange={e => setEditingEvent({ ...editingEvent, date: e.target.value })} className="form-input w-full" />
                                 </div>
                                 <div>
-                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Event Type</label>
-                                    <select value={editingEvent.type} onChange={e => setEditingEvent({ ...editingEvent, type: e.target.value })} className="form-input w-full text-white bg-background-dark">
+                                    <label className="block text-slate-400 text-sm font-semibold mb-2">Event Category</label>
+                                    <select value={editingEvent.category || 'academic'} onChange={e => setEditingEvent({ ...editingEvent, category: e.target.value })} className="form-input w-full text-white bg-background-dark">
                                         <option value="academic">Academic</option>
                                         <option value="sports">Sports</option>
                                         <option value="club">Club</option>
                                         <option value="holiday">Holiday</option>
+                                        <option value="cultural">Cultural</option>
                                         <option value="other">Other</option>
                                     </select>
                                 </div>

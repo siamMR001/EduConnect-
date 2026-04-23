@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { 
+  FileText, X, CheckCircle, Clock, Award, 
+  MessageSquare, Download, AlertCircle, ChevronRight,
+  ClipboardList
+} from 'lucide-react';
 
 export default function StudentAssignments() {
     const [assignments, setAssignments] = useState([]);
@@ -236,10 +241,12 @@ export default function StudentAssignments() {
                                                 <p className="text-xs text-slate-400">Submitted On</p>
                                                 <p className="text-sm font-semibold text-slate-200">{new Date(assignment.submission.submittedAt).toLocaleDateString()}</p>
                                             </div>
-                                            {assignment.submission.marksObtained !== null && (
+                                            {assignment.submission.status === 'graded' && (
                                                 <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur p-3 rounded border border-green-500/20">
                                                     <p className="text-xs text-slate-400">Marks Obtained</p>
-                                                    <p className="text-lg font-bold text-green-400">{assignment.submission.marksObtained}/{assignment.totalMarks}</p>
+                                                    <p className="text-lg font-bold text-green-400">
+                                                        {assignment.submission.marksObtained !== null ? assignment.submission.marksObtained : '—'}/{assignment.totalMarks}
+                                                    </p>
                                                 </div>
                                             )}
                                         </>
@@ -289,8 +296,11 @@ export default function StudentAssignments() {
                                     ) : null}
                                     {assignment.submission && (
                                         <button
-                                            onClick={() => setSelectedAssignment(assignment)}
-                                            className="px-4 py-2 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-lg hover:shadow-lg hover:shadow-slate-500/50 transition-all"
+                                            onClick={() => {
+                                                setSelectedAssignment(assignment);
+                                                setShowSubmitModal(false); // Ensure submit modal is closed
+                                            }}
+                                            className="px-4 py-2 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-lg hover:shadow-lg hover:shadow-slate-500/50 transition-all font-bold"
                                         >
                                             View Details
                                         </button>
@@ -361,6 +371,120 @@ export default function StudentAssignments() {
                             >
                                 Cancel
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View Details/Submission Modal */}
+            {!showSubmitModal && selectedAssignment && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+                    <div className="bg-[#0f0f1a] border border-white/10 rounded-[40px] p-8 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-8">
+                           <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
+                                    <FileText className="w-5 h-5 text-primary-light" />
+                                </div>
+                                <h2 className="text-2xl font-black text-white">Assignment Details</h2>
+                           </div>
+                           <button onClick={() => setSelectedAssignment(null)} className="p-2 text-slate-500 hover:text-white transition-colors">
+                                <X size={24} />
+                           </button>
+                        </div>
+
+                        <div className="space-y-8">
+                            {/* Assignment Info Section */}
+                            <div className="bg-white/5 rounded-3xl p-6 border border-white/10">
+                                <h3 className="text-xl font-bold text-white mb-2">{selectedAssignment.title}</h3>
+                                <p className="text-slate-400 text-sm mb-4 leading-relaxed">{selectedAssignment.description}</p>
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="bg-black/30 px-4 py-2 rounded-xl border border-white/5">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Subject</p>
+                                        <p className="text-sm text-blue-400 font-bold">{selectedAssignment.subject}</p>
+                                    </div>
+                                    <div className="bg-black/30 px-4 py-2 rounded-xl border border-white/5">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Marks</p>
+                                        <p className="text-sm text-white font-bold">{selectedAssignment.totalMarks}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Submission Section */}
+                            {selectedAssignment.submission ? (
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Your Submission</h4>
+                                        {getStatusBadge(selectedAssignment.submission)}
+                                    </div>
+
+                                    {selectedAssignment.submission.status === 'graded' && (
+                                        <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-3xl p-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1">Grade Awarded</p>
+                                                    <p className="text-3xl font-black text-white">
+                                                        {selectedAssignment.submission.marksObtained !== null ? selectedAssignment.submission.marksObtained : '—'}
+                                                        <span className="text-slate-500 text-lg"> / {selectedAssignment.totalMarks}</span>
+                                                    </p>
+                                                </div>
+                                                <div className="w-16 h-16 bg-green-500/20 rounded-2xl flex items-center justify-center font-black text-2xl text-green-400 border border-green-500/20">
+                                                    {selectedAssignment.submission.marksObtained !== null ? Math.round((selectedAssignment.submission.marksObtained / selectedAssignment.totalMarks) * 100) : '?'}%
+                                                </div>
+                                            </div>
+                                            {selectedAssignment.submission.feedback && (
+                                                <div className="mt-4 pt-4 border-t border-green-500/10">
+                                                    <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-2">Teacher Feedback</p>
+                                                    <p className="text-slate-300 text-sm italic py-2">"{selectedAssignment.submission.feedback}"</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-3">Submitted At</p>
+                                            <p className="text-sm text-slate-300 font-bold">{new Date(selectedAssignment.submission.submittedAt).toLocaleString()}</p>
+                                            {selectedAssignment.submission.isLate && (
+                                                <span className="mt-2 inline-block px-2 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-black uppercase rounded">Late Submission</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {selectedAssignment.submission.submissionText && (
+                                        <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-3">Your Answer/Notes</p>
+                                            <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{selectedAssignment.submission.submissionText}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-white/5 rounded-3xl border border-dashed border-white/10">
+                                    <p className="text-slate-500 font-medium">You haven't submitted this assignment yet.</p>
+                                    <button 
+                                        onClick={() => setShowSubmitModal(true)}
+                                        className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all"
+                                    >
+                                        Submit Now
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="pt-4 flex gap-4">
+                                <button 
+                                    onClick={() => setSelectedAssignment(null)}
+                                    className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all border border-white/10"
+                                >
+                                    Close
+                                </button>
+                                {(!selectedAssignment.submission || selectedAssignment.submission.status === 'graded') && (
+                                    <button 
+                                        onClick={() => setShowSubmitModal(true)}
+                                        className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                    >
+                                        {selectedAssignment.submission ? 'Resubmit' : 'Prepare Submission'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
