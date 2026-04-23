@@ -17,6 +17,10 @@ import TeacherProfile from './pages/TeacherProfile';
 import Classrooms from './pages/Classrooms';
 import ClassroomView from './pages/ClassroomView';
 import AdminSettings from './pages/AdminSettings';
+import AdminBusRoutes from './pages/AdminBusRoutes';
+import BusDriverPanel from './pages/BusDriverPanel';
+import BusTrackingMap from './pages/BusTrackingMap';
+import BusFare from './pages/BusFare';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -84,7 +88,24 @@ function App() {
                     </Link>
                   )}
 
-                  {user?.role !== 'student' && (
+                  {user?.role === 'employee' && (
+                    <Link to='/bus-driver' className="text-slate-300 hover:text-white font-medium transition-colors">
+                      Drive Bus
+                    </Link>
+                  )}
+
+                  {(user?.role === 'student' || user?.role === 'admin') && (
+                    <Link to="/track-bus" className="text-slate-300 hover:text-white font-medium transition-colors">
+                      Track Bus
+                    </Link>
+                  )}
+                  {user?.role === 'student' && (
+                    <Link to="/bus-fare" className="text-slate-300 hover:text-white font-medium transition-colors">
+                      Bus Fare
+                    </Link>
+                  )}
+
+                  {(user?.role !== 'student' && user?.role !== 'employee') && (
                     <Link to="/directory" className="text-slate-300 hover:text-white font-medium transition-colors">
                       SIS
                     </Link>
@@ -98,14 +119,19 @@ function App() {
                       <Link to="/admin/students" className="text-slate-300 hover:text-white font-medium transition-colors">
                         Students
                       </Link>
+                      <Link to="/admin/bus-routes" className="text-slate-300 hover:text-white font-medium transition-colors">
+                        Bus Routes
+                      </Link>
                       <Link to="/admin/settings" className="text-slate-300 hover:text-white font-medium transition-colors">
                         Settings
                       </Link>
                     </>
                   )}
-                  <Link to="/classrooms" className="text-slate-300 hover:text-white font-medium transition-colors">
-                    Classrooms
-                  </Link>
+                  {(user?.role !== 'employee') && (
+                    <Link to="/classrooms" className="text-slate-300 hover:text-white font-medium transition-colors">
+                      Classrooms
+                    </Link>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3 sm:gap-4">
@@ -165,7 +191,11 @@ function App() {
             <Route path="/classrooms/:id" element={isLoggedIn ? <ClassroomView /> : <Navigate to="/login" replace />} />
             <Route path="/admin/teachers" element={isLoggedIn && user?.role === 'admin' ? <AdminTeacherDashboard /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/students" element={isLoggedIn && user?.role === 'admin' ? <AdminStudentAssignment /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/admin/bus-routes" element={isLoggedIn && user?.role === 'admin' ? <AdminBusRoutes /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/settings" element={isLoggedIn && user?.role === 'admin' ? <AdminSettings /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/bus-driver" element={isLoggedIn && user?.role === 'employee' ? <BusDriverPanel /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/track-bus" element={isLoggedIn ? <BusTrackingMap /> : <Navigate to="/login" replace />} />
+            <Route path="/bus-fare" element={isLoggedIn && user?.role === 'student' ? <BusFare /> : <Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />} />
           </Routes>
         </main>

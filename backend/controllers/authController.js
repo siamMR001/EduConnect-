@@ -201,7 +201,7 @@ exports.registerTeacher = async (req, res) => {
             name: `${employee.firstName} ${employee.lastName}`,
             email: targetEmail,
             password,
-            role: employee.employeeType === 'teacher' ? 'teacher' : 'admin',
+            role: employee.employeeType === 'teacher' ? 'teacher' : (employee.employeeType === 'employee' ? 'employee' : 'admin'),
             employeeId: employee._id
         });
 

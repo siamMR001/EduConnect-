@@ -105,7 +105,7 @@ const Login = () => {
                                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                                     }`}
                             >
-                                {role.replace('_', '/')}
+                                {role === 'student' ? 'Student/Guardian' : role === 'teacher' ? 'Teacher/Employee' : role}
                             </button>
                         ))}
                     </div>

@@ -9,6 +9,57 @@ const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const app = express();
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, {
+    cors: {
+        origin: '*', // Allow all origins
+        methods: ["GET", "POST"]
+    }
+});
+
+// Socket.io connection and event listeners
+io.on("connection", (socket) => {
+    console.log(`User Connected: ${socket.id}`);
+    
+    // Listen for live bus tracking updates
+    socket.on("bus-location", (data) => {
+        // Broadcast the data to all other connected clients
+        socket.broadcast.emit("bus-moved", data);
+    });
+
+    socket.on("bus-arrived", async (data) => {
+        // Broadcast arrival to clients (for Admin/Student popup)
+        socket.broadcast.emit("bus-arrived", data);
+
+        // Send email to all students/guardians
+        try {
+            const User = require('./models/User');
+            const sendEmail = require('./utils/emailService');
+            
+            const students = await User.find({ role: 'student' });
+            const message = `Dear Student/Guardian,\n\nThe school bus (${data.driverName}) has arrived at its destination (${data.destName}) on ${data.routeName}.\n\nThank you,\nEduConnect Admin`;
+            
+            for (const student of students) {
+                if (student.email) {
+                    await sendEmail({
+                        email: student.email,
+                        subject: '🚌 School Bus Arrived at Destination',
+                        message: message
+                    });
+                }
+            }
+            console.log(`Sent arrival emails to ${students.length} students.`);
+        } catch (error) {
+            console.error('Error sending bus arrival emails:', error);
+        }
+    });
+
+    socket.on("disconnect", () => {
+        console.log(`User Disconnected: ${socket.id}`);
+    });
+});
 
 // Middleware
 app.use(express.json());
@@ -40,6 +91,7 @@ app.use('/api/submissions', require('./routes/submissionRoutes'));
 app.use('/api/classrooms', require('./routes/classroomRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/subjects', require('./routes/subjectRoutes'));
+app.use('/api/bus-routes', require('./routes/busRouteRoutes'));
 
 // Start Cron Jobs
 const { markLateAssignments } = require('./cron/assignmentsCron');
@@ -50,7 +102,7 @@ const MONGO_URI = process.env.MONGODB_URI;
 mongoose.connect(MONGO_URI)
     .then(() => {
         console.log('MongoDB connection established successfully.');
-        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+        server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     })
     .catch((err) => {
         console.error('MongoDB connection error:', err);
