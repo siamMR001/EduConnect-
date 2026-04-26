@@ -92,6 +92,7 @@ app.use('/api/classrooms', require('./routes/classroomRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/subjects', require('./routes/subjectRoutes'));
 app.use('/api/bus-routes', require('./routes/busRouteRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
 
 // Start Cron Jobs
 const { markLateAssignments } = require('./cron/assignmentsCron');

@@ -69,6 +69,7 @@ const admissionSchema = new mongoose.Schema({
         enum: ['paid', 'unpaid'],
         default: 'unpaid'
     },
+    paymentIntentId: { type: String },
     createdAt: { type: Date, default: Date.now }
 });
 

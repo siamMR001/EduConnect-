@@ -66,6 +66,8 @@ const studentProfileSchema = new mongoose.Schema({
     }],
     status: { type: String, enum: ['active', 'inactive', 'dropped', 'graduated', 'transferred'], default: 'active' },
     busFarePaidUntil: { type: Date, default: Date.now },
+    paymentIntentId: { type: String },
+    registrationPaymentStatus: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
     createdAt: { type: Date, default: Date.now }
 });
 
