@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserPlus, ChevronRight, CheckCircle, School, AlertCircle, Upload, CreditCard, Lock } from 'lucide-react';
-import StripePaymentModal from '../components/StripePaymentModal';
+import PaymentModal from '../components/PaymentModal';
 
 // Helper for rendering inputs
 const Input = ({ label, name, type = "text", req = false, isFile = false, multi = false, acc, formData, handleChange, handleFileChange, fileValue }) => {
@@ -134,12 +134,12 @@ const AdmissionForm = () => {
         }
     };
 
-    const handlePaymentSuccess = async (paymentIntentId) => {
+    const handlePaymentSuccess = async (paymentIntentId, method) => {
         setIsPaymentModalOpen(false);
-        handlePaymentConfirm(paymentIntentId);
+        handlePaymentConfirm(paymentIntentId, method);
     };
 
-    const handlePaymentConfirm = async (paymentIntentId) => {
+    const handlePaymentConfirm = async (paymentIntentId, method) => {
         setIsSubmitting(true);
         setError(null);
 
@@ -173,7 +173,10 @@ const AdmissionForm = () => {
                     submissionData.append(key, submitData[key] || '');
                 }
             });
-            submissionData.append('paymentStatus', 'paid');
+            const isInstant = ['stripe', 'apple_pay', 'google_pay'].includes(method);
+            submissionData.append('paymentStatus', isInstant ? 'paid' : 'pending_verification');
+            submissionData.append('paymentMethod', method);
+
             if (paymentIntentId) {
                 submissionData.append('paymentIntentId', paymentIntentId);
             }
@@ -412,10 +415,13 @@ const AdmissionForm = () => {
                     </form>
                 </div>
 
-            <StripePaymentModal 
+            <PaymentModal 
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}
                 amount={admissionFee * 100} // Convert to cents for Stripe
+                studentId={previewStudentId}
+                studentData={{ name: `${formData.firstName} ${formData.lastName}` }}
+                type="admission"
                 onSuccess={handlePaymentSuccess}
             />
         </div>

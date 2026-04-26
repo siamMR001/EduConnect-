@@ -21,6 +21,7 @@ import AdminBusRoutes from './pages/AdminBusRoutes';
 import BusDriverPanel from './pages/BusDriverPanel';
 import BusTrackingMap from './pages/BusTrackingMap';
 import BusFare from './pages/BusFare';
+import AdminPayments from './pages/AdminPayments';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -122,6 +123,9 @@ function App() {
                       <Link to="/admin/bus-routes" className="text-slate-300 hover:text-white font-medium transition-colors">
                         Bus Routes
                       </Link>
+                      <Link to="/admin/payments" className="text-slate-300 hover:text-white font-medium transition-colors">
+                        Payments
+                      </Link>
                       <Link to="/admin/settings" className="text-slate-300 hover:text-white font-medium transition-colors">
                         Settings
                       </Link>
@@ -192,6 +196,7 @@ function App() {
             <Route path="/admin/teachers" element={isLoggedIn && user?.role === 'admin' ? <AdminTeacherDashboard /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/students" element={isLoggedIn && user?.role === 'admin' ? <AdminStudentAssignment /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/bus-routes" element={isLoggedIn && user?.role === 'admin' ? <AdminBusRoutes /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/admin/payments" element={isLoggedIn && user?.role === 'admin' ? <AdminPayments /> : <Navigate to="/dashboard" replace />} />
             <Route path="/admin/settings" element={isLoggedIn && user?.role === 'admin' ? <AdminSettings /> : <Navigate to="/dashboard" replace />} />
             <Route path="/bus-driver" element={isLoggedIn && user?.role === 'employee' ? <BusDriverPanel /> : <Navigate to="/dashboard" replace />} />
             <Route path="/track-bus" element={isLoggedIn ? <BusTrackingMap /> : <Navigate to="/login" replace />} />

@@ -54,9 +54,15 @@ exports.registerUser = async (req, res) => {
             if (requestedRole === 'student') {
                 try {
                     existingProfile.user = user._id;
+                    const isInstant = ['stripe', 'apple_pay', 'google_pay'].includes(req.body.paymentMethod);
+                    
                     if (req.body.paymentIntentId) {
                         existingProfile.paymentIntentId = req.body.paymentIntentId;
                         existingProfile.registrationPaymentStatus = 'paid';
+                    } else if (req.body.paymentMethod) {
+                        existingProfile.paymentMethod = req.body.paymentMethod;
+                        existingProfile.transactionId = req.body.transactionId;
+                        existingProfile.registrationPaymentStatus = 'pending_verification';
                     }
                     await existingProfile.save();
                     
@@ -84,6 +90,7 @@ exports.registerUser = async (req, res) => {
                         name: user.name,
                         email: user.email,
                         role: user.role,
+                        paymentStatus: existingProfile.registrationPaymentStatus,
                         token: generateToken(user._id, user.role),
                     });
                 } catch (profileError) {

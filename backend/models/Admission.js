@@ -66,9 +66,15 @@ const admissionSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ['paid', 'unpaid'],
+        enum: ['paid', 'unpaid', 'pending_verification'],
         default: 'unpaid'
     },
+    paymentMethod: {
+        type: String,
+        enum: ['stripe', 'apple_pay', 'google_pay', 'bkash', 'rocket', 'nagad', 'bank_transfer']
+    },
+    transactionId: { type: String },
+    paymentProof: { type: String }, // File path for bank receipt
     paymentIntentId: { type: String },
     createdAt: { type: Date, default: Date.now }
 });

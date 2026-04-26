@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Mail, ChevronRight, School, CreditCard } from 'lucide-react';
-import StripePaymentModal from '../components/StripePaymentModal';
+import PaymentModal from '../components/PaymentModal';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -82,12 +82,21 @@ const Login = () => {
         }
     };
 
-    const handlePaymentSuccess = async (paymentIntentId) => {
+    const handlePaymentSuccess = async (paymentIntentId, method) => {
         setIsPaymentModalOpen(false);
         setIsLoading(true);
         setError(null);
 
-        const payload = { ...formData, role: 'student', paymentIntentId };
+        const payload = { 
+            ...formData, 
+            role: 'student', 
+            paymentIntentId, 
+            paymentMethod: method,
+            transactionId: method !== 'stripe' ? paymentIntentId : undefined // For Stripe, we use intent ID as txn ID for now or it's handled separately
+        };
+
+        // Note: For manual payments, PaymentModal handles the 'submit-manual' for existing records, 
+        // but for account creation, we need to pass it to register endpoint.
 
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
@@ -98,14 +107,19 @@ const Login = () => {
             const data = await response.json();
 
             if (response.ok) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data));
+                if (data.paymentStatus === 'pending_verification') {
+                    setError('Registration submitted. Your account will be activated once admin verifies your payment.');
+                    setIsLoading(false);
+                } else {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data));
 
-                if (rememberMe) {
-                    localStorage.setItem('rememberedEmail', formData.email);
+                    if (rememberMe) {
+                        localStorage.setItem('rememberedEmail', formData.email);
+                    }
+
+                    navigate('/dashboard');
                 }
-
-                navigate('/dashboard');
             } else {
                 setError(data.message || 'Registration failed after payment. Please contact admin.');
                 setIsLoading(false);
@@ -282,10 +296,13 @@ const Login = () => {
                 </p>
             </div>
 
-            <StripePaymentModal 
+            <PaymentModal 
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}
                 amount={5000} // $50.00
+                studentId={formData.studentId}
+                studentData={{ name: formData.name }}
+                type="registration"
                 onSuccess={handlePaymentSuccess}
             />
         </div>

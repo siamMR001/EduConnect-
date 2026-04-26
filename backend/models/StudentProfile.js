@@ -67,7 +67,17 @@ const studentProfileSchema = new mongoose.Schema({
     status: { type: String, enum: ['active', 'inactive', 'dropped', 'graduated', 'transferred'], default: 'active' },
     busFarePaidUntil: { type: Date, default: Date.now },
     paymentIntentId: { type: String },
-    registrationPaymentStatus: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+    registrationPaymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed', 'pending_verification'],
+        default: 'pending'
+    },
+    paymentMethod: {
+        type: String,
+        enum: ['stripe', 'apple_pay', 'google_pay', 'bkash', 'rocket', 'nagad', 'bank_transfer']
+    },
+    transactionId: { type: String },
+    paymentProof: { type: String }, // File path for bank receipt
     createdAt: { type: Date, default: Date.now }
 });
 
