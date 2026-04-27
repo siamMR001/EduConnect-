@@ -11,6 +11,7 @@ const BusDriverPanel = () => {
     const [selectedRoute, setSelectedRoute] = useState(null);
     const socketRef = useRef(null);
     const watchIdRef = useRef(null);
+    const simulationIntervalRef = useRef(null);
 
     const user = JSON.parse(localStorage.getItem('user'));
 
@@ -59,6 +60,7 @@ const BusDriverPanel = () => {
 
                 // Emit location to server
                 if (socketRef.current) {
+                    console.log('[BusDriver] Emitting bus-location:', { lat: latitude, lng: longitude });
                     socketRef.current.emit('bus-location', {
                         driverId: user._id,
                         driverName: user.name,
@@ -104,9 +106,6 @@ const BusDriverPanel = () => {
         setStatus('Trip Ended');
         setPosition(null);
     };
-
-    // --- Simulation Logic for Testing on PC ---
-    const simulationIntervalRef = useRef(null);
     const simulateMovement = () => {
         if (!selectedRoute) {
             alert('Please select a Fixed Route for the simulation.');
@@ -152,6 +151,7 @@ const BusDriverPanel = () => {
             setPosition({ lat: currentPos.lat, lng: currentPos.lng, speed: simulatedSpeed });
 
             if (socketRef.current) {
+                console.log('[BusDriver] Simulating bus-location:', { lat: currentPos.lat, lng: currentPos.lng, step: currentIndex });
                 socketRef.current.emit('bus-location', {
                     driverId: user._id,
                     driverName: user.name,

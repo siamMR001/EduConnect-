@@ -259,6 +259,12 @@ function App() {
                   </Link>
                 )}
 
+                {user?.role === 'employee' && (
+                  <Link to="/bus-driver" className="text-slate-400 hover:text-white font-bold text-sm transition-all hover:-translate-y-0.5 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5">
+                    <Bus size={18} /> Driver Panel
+                  </Link>
+                )}
+
                 {(user?.role !== 'employee') && (
                   <Link to="/classrooms" className="text-slate-400 hover:text-white font-bold text-sm transition-all hover:-translate-y-0.5 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5">
                     <BookOpen size={18} /> Classrooms
