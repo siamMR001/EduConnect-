@@ -25,25 +25,27 @@ router.get('/', async (req, res) => {
 // PUT /api/settings - Update settings (Admin only ideally)
 router.put('/', async (req, res) => {
     try {
-        const { admissionFee, attendanceEmailTemplate } = req.body;
+        const { 
+            admissionFee, 
+            attendanceEmailTemplate, 
+            geminiApiKey,
+            monthlyBusFare,
+            busFinePerDay
+        } = req.body;
 
         let settings = await getOrCreateSettings();
 
-        if (admissionFee !== undefined) {
-            settings.admissionFee = admissionFee;
-        }
-        if (attendanceEmailTemplate !== undefined) {
-            settings.attendanceEmailTemplate = attendanceEmailTemplate;
-        }
-        if (req.body.geminiApiKey !== undefined) {
-            settings.geminiApiKey = req.body.geminiApiKey;
-        }
+        if (admissionFee !== undefined) settings.admissionFee = admissionFee;
+        if (attendanceEmailTemplate !== undefined) settings.attendanceEmailTemplate = attendanceEmailTemplate;
+        if (geminiApiKey !== undefined) settings.geminiApiKey = geminiApiKey;
+        if (monthlyBusFare !== undefined) settings.monthlyBusFare = monthlyBusFare;
+        if (busFinePerDay !== undefined) settings.busFinePerDay = busFinePerDay;
 
         await settings.save();
         res.json({ message: 'Settings updated successfully', settings });
     } catch (error) {
         console.error("Settings PUT Error:", error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
 

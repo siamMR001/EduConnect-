@@ -176,6 +176,7 @@ const AdmissionForm = () => {
             const isInstant = ['stripe', 'apple_pay', 'google_pay'].includes(method);
             submissionData.append('paymentStatus', isInstant ? 'paid' : 'pending_verification');
             submissionData.append('paymentMethod', method);
+            submissionData.append('amount', admissionFee);
 
             if (paymentIntentId) {
                 submissionData.append('paymentIntentId', paymentIntentId);

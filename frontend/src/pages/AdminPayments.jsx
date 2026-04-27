@@ -2,19 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { 
     CheckCircle, XCircle, Clock, Search, 
     Smartphone, Landmark, Eye, ExternalLink, 
-    AlertCircle, Loader2, Filter, RefreshCcw
+    AlertCircle, Loader2, Filter, RefreshCcw,
+    Download, Printer, Banknote, Calendar,
+    User, ArrowRight, FileText, RotateCcw
 } from 'lucide-react';
 
 const AdminPayments = () => {
     const [pendingPayments, setPendingPayments] = useState({ admissions: [], profiles: [] });
+    const [incomeHistory, setIncomeHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState('all');
+    const [activeTab, setActiveTab] = useState('pending'); // pending, history
+    const [subTab, setSubTab] = useState('all'); // all, admission, registration
+    
+    // Filters for Income Report
+    const [filterMonth, setFilterMonth] = useState('');
+    const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
+
+    const months = [
+        { value: '', label: 'All Months' },
+        { value: '0', label: 'January' },
+        { value: '1', label: 'February' },
+        { value: '2', label: 'March' },
+        { value: '3', label: 'April' },
+        { value: '4', label: 'May' },
+        { value: '5', label: 'June' },
+        { value: '6', label: 'July' },
+        { value: '7', label: 'August' },
+        { value: '8', label: 'September' },
+        { value: '9', label: 'October' },
+        { value: '10', label: 'November' },
+        { value: '11', label: 'December' },
+    ];
+
+    const availableYears = [...new Set(incomeHistory.map(p => new Date(p.date).getFullYear().toString())), new Date().getFullYear().toString()].sort((a, b) => b - a);
 
     useEffect(() => {
-        fetchPendingPayments();
-    }, []);
+        if (activeTab === 'pending') {
+            fetchPendingPayments();
+        } else {
+            fetchIncomeHistory();
+        }
+    }, [activeTab]);
 
     const fetchPendingPayments = async () => {
         setLoading(true);
@@ -26,6 +56,21 @@ const AdminPayments = () => {
             }
         } catch (error) {
             console.error("Error fetching payments:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchIncomeHistory = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/income-history`);
+            const data = await res.json();
+            if (res.ok) {
+                setIncomeHistory(data);
+            }
+        } catch (error) {
+            console.error("Error fetching income history:", error);
         } finally {
             setLoading(false);
         }
@@ -49,80 +94,182 @@ const AdminPayments = () => {
         }
     };
 
-    const allPayments = [
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const resetFilters = () => {
+        setSearchTerm('');
+        setFilterMonth('');
+        setFilterYear(new Date().getFullYear().toString());
+    };
+
+    const allPending = [
         ...pendingPayments.admissions.map(p => ({ ...p, type: 'admission' })),
         ...pendingPayments.profiles.map(p => ({ ...p, type: 'registration' }))
     ];
 
-    const filteredPayments = allPayments.filter(p => {
+    const filteredPending = allPending.filter(p => {
         const matchesSearch = 
             p.studentId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
             (p.firstName + ' ' + p.lastName).toLowerCase().includes(searchTerm.toLowerCase());
         
-        if (activeTab === 'admission') return matchesSearch && p.type === 'admission';
-        if (activeTab === 'registration') return matchesSearch && p.type === 'registration';
+        if (subTab === 'admission') return matchesSearch && p.type === 'admission';
+        if (subTab === 'registration') return matchesSearch && p.type === 'registration';
         return matchesSearch;
     });
 
+    const filteredHistory = incomeHistory.filter(p => {
+        const paymentDate = new Date(p.date);
+        const matchesSearch = p.studentId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             p.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             p.transactionId?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesMonth = filterMonth === '' || paymentDate.getMonth().toString() === filterMonth;
+        const matchesYear = filterYear === '' || paymentDate.getFullYear().toString() === filterYear;
+
+        return matchesSearch && matchesMonth && matchesYear;
+    });
+
+    const totalIncome = filteredHistory.reduce((sum, p) => sum + p.amount, 0);
+
     return (
-        <div className="space-y-8 animate-fade-in">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-8 animate-fade-in relative">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
                 <div>
-                    <h1 className="text-3xl font-black text-white tracking-tight">Pending Payments</h1>
-                    <p className="text-slate-400 mt-1">Verify manual submissions for admissions and registrations</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
+                        <Banknote className="text-primary" size={36} />
+                        Financial Management
+                    </h1>
+                    <p className="text-slate-400 mt-1">Track income, verify payments, and generate financial reports</p>
                 </div>
-                <button onClick={fetchPendingPayments} className="btn-secondary flex items-center gap-2 self-start md:self-auto">
-                    <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
-                    Refresh
+                <div className="flex gap-3">
+                    <button onClick={activeTab === 'pending' ? fetchPendingPayments : fetchIncomeHistory} className="btn-secondary flex items-center gap-2">
+                        <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
+                    {activeTab === 'history' && (
+                        <button onClick={handlePrint} className="btn-primary flex items-center gap-2 shadow-lg shadow-primary/20">
+                            <Printer size={18} />
+                            Print Report
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Main Tabs */}
+            <div className="flex border-b border-white/5 no-print">
+                <button 
+                    onClick={() => setActiveTab('pending')}
+                    className={`px-8 py-4 text-sm font-black uppercase tracking-widest transition-all relative ${activeTab === 'pending' ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    Pending Verifications
+                    {allPending.length > 0 && (
+                        <span className="absolute top-3 right-2 w-5 h-5 bg-primary text-white text-[10px] flex items-center justify-center rounded-full border-2 border-background animate-pulse font-black">
+                            {allPending.length}
+                        </span>
+                    )}
+                    {activeTab === 'pending' && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full shadow-[0_-4px_12px_rgba(59,130,246,0.5)]"></div>}
+                </button>
+                <button 
+                    onClick={() => setActiveTab('history')}
+                    className={`px-8 py-4 text-sm font-black uppercase tracking-widest transition-all relative ${activeTab === 'history' ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    Income History & Reports
+                    {activeTab === 'history' && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full shadow-[0_-4px_12px_rgba(59,130,246,0.5)]"></div>}
                 </button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                    { label: 'Total Pending', value: allPayments.length, icon: Clock, color: 'text-primary' },
-                    { label: 'Admissions', value: pendingPayments.admissions.length, icon: Landmark, color: 'text-blue-400' },
-                    { label: 'Registrations', value: pendingPayments.profiles.length, icon: Smartphone, color: 'text-indigo-400' }
-                ].map((stat, i) => (
-                    <div key={i} className="glass-panel p-6 flex items-center justify-between border-white/5">
-                        <div>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{stat.label}</p>
-                            <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
-                        </div>
-                        <div className={`p-4 rounded-2xl bg-white/5 border border-white/5 ${stat.color}`}>
-                            <stat.icon size={24} />
-                        </div>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 no-print">
+                {activeTab === 'pending' ? (
+                    <>
+                        <KPICard label="Total Pending" value={allPending.length} icon={Clock} color="text-primary" />
+                        <KPICard label="Admissions" value={pendingPayments.admissions.length} icon={Landmark} color="text-blue-400" />
+                        <KPICard label="Registrations" value={pendingPayments.profiles.length} icon={Smartphone} color="text-indigo-400" />
+                        <KPICard label="Status" value="Action Required" icon={AlertCircle} color="text-orange-400" />
+                    </>
+                ) : (
+                    <>
+                        <KPICard label="Transactions" value={filteredHistory.length} icon={FileText} color="text-primary" />
+                        <KPICard label="Admission Revenue" value={`৳${filteredHistory.filter(p => p.type === 'Admission Fee').reduce((s, p) => s + p.amount, 0).toLocaleString()}`} icon={Landmark} color="text-emerald-400" />
+                        <KPICard label="Registration Revenue" value={`৳${filteredHistory.filter(p => p.type === 'Registration Fee').reduce((s, p) => s + p.amount, 0).toLocaleString()}`} icon={Smartphone} color="text-blue-400" />
+                        <KPICard label="Net Income" value={`৳${totalIncome.toLocaleString()}`} icon={Banknote} color="text-green-500" />
+                    </>
+                )}
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-black/20 p-4 rounded-3xl border border-white/5 no-print">
+                <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-2xl">
+                    {activeTab === 'pending' ? (
+                        ['all', 'admission', 'registration'].map(tab => (
+                            <button key={tab} onClick={() => setSubTab(tab)} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${subTab === tab ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
+                                {tab}
+                            </button>
+                        ))
+                    ) : (
+                        <>
+                            <select
+                                value={filterMonth}
+                                onChange={(e) => setFilterMonth(e.target.value)}
+                                className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-400 focus:ring-0 cursor-pointer hover:text-white px-4"
+                            >
+                                {months.map(m => <option key={m.value} value={m.value} className="bg-slate-900 text-white">{m.label}</option>)}
+                            </select>
+                            <div className="w-px h-6 bg-white/10 self-center"></div>
+                            <select
+                                value={filterYear}
+                                onChange={(e) => setFilterYear(e.target.value)}
+                                className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-400 focus:ring-0 cursor-pointer hover:text-white px-4"
+                            >
+                                <option value="" className="bg-slate-900 text-white">All Years</option>
+                                {availableYears.map(y => <option key={y} value={y} className="bg-slate-900 text-white">{y}</option>)}
+                            </select>
+                        </>
+                    )}
+                </div>
+                
+                <div className="flex gap-3 w-full md:w-auto">
+                    <div className="relative flex-grow md:w-80 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder={activeTab === 'pending' ? "Search ID or Name..." : "Search Name, ID or TxID..."}
+                            value={searchTerm} 
+                            onChange={(e) => setSearchTerm(e.target.value)} 
+                            className="input-field pl-12 h-12 rounded-2xl text-xs" 
+                        />
                     </div>
-                ))}
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-black/20 p-4 rounded-2xl border border-white/5">
-                <div className="flex p-1 bg-white/5 rounded-xl self-stretch md:self-auto">
-                    {['all', 'admission', 'registration'].map(tab => (
-                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === tab ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
-                            {tab}
+                    {activeTab === 'history' && (
+                        <button
+                            onClick={resetFilters}
+                            className="p-3 bg-white/5 text-slate-400 border border-white/10 rounded-2xl hover:bg-white/10 hover:text-white transition-all"
+                            title="Reset Filters"
+                        >
+                            <RotateCcw size={20} />
                         </button>
-                    ))}
-                </div>
-                <div className="relative w-full md:w-80 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
-                    <input type="text" placeholder="Search ID or Name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input-field pl-12 h-11" />
+                    )}
                 </div>
             </div>
 
-            {/* Main Table */}
-            <div className="glass-panel border-white/5 overflow-hidden">
+            {/* Content Table */}
+            <div className="glass-panel border-white/5 overflow-hidden no-print">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-white/5 bg-white/5">
-                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Student / ID</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Type</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Method</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Transaction / Proof</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-widest">Actions</th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">
+                                    {activeTab === 'pending' ? 'Student / ID' : 'Income Source'}
+                                </th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Type</th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Method</th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Transaction / Date</th>
+                                <th className="px-6 py-5 text-right text-xs font-black text-slate-400 uppercase tracking-widest">
+                                    {activeTab === 'pending' ? 'Actions' : 'Status'}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -130,94 +277,219 @@ const AdminPayments = () => {
                                 <tr>
                                     <td colSpan="6" className="px-6 py-20 text-center">
                                         <Loader2 size={40} className="animate-spin mx-auto text-primary mb-4" />
-                                        <p className="text-slate-400 animate-pulse">Scanning database for pending payments...</p>
+                                        <p className="text-slate-400 animate-pulse font-bold">Synchronizing financial records...</p>
                                     </td>
                                 </tr>
-                            ) : filteredPayments.length === 0 ? (
+                            ) : (activeTab === 'pending' ? filteredPending : filteredHistory).length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="px-6 py-20 text-center">
-                                        <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/20">
-                                            <CheckCircle size={40} className="text-green-500" />
+                                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
+                                            {activeTab === 'pending' ? <CheckCircle size={40} className="text-primary" /> : <Search size={40} className="text-primary" />}
                                         </div>
-                                        <h3 className="text-xl font-bold text-white">All Caught Up!</h3>
-                                        <p className="text-slate-400 mt-1">No pending payments found requiring verification.</p>
+                                        <h3 className="text-xl font-black text-white">No Records Found</h3>
+                                        <p className="text-slate-400 mt-1">Try adjusting your filters or search terms.</p>
                                     </td>
                                 </tr>
-                            ) : filteredPayments.map((p) => (
+                            ) : (activeTab === 'pending' ? filteredPending : filteredHistory).map((p) => (
                                 <tr key={p._id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-700 to-slate-800 flex items-center justify-center text-white font-bold group-hover:scale-110 transition-transform">
-                                                {p.firstName?.[0]}{p.lastName?.[0]}
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-white font-black group-hover:border-primary/50 transition-all">
+                                                {(p.firstName || p.studentName)?.[0]}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{p.firstName} {p.lastName}</p>
-                                                <p className="text-[10px] text-slate-500 font-mono tracking-tighter mt-0.5">{p.studentId}</p>
+                                                <p className="text-sm font-black text-white group-hover:text-primary transition-colors">
+                                                    {p.studentName || `${p.firstName} ${p.lastName}`}
+                                                </p>
+                                                <p className="text-[10px] text-slate-500 font-black tracking-widest mt-0.5 uppercase">ID: {p.studentId}</p>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter ${p.type === 'admission' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'}`}>
+                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                            (p.type || p.category) === 'admission' || p.type === 'Admission Fee' 
+                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                                            : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                                        }`}>
                                             {p.type}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            {p.paymentMethod === 'bank_transfer' ? <Landmark size={14} className="text-slate-400" /> : <Smartphone size={14} className="text-slate-400" />}
-                                            <span className="text-xs text-white capitalize">{p.paymentMethod}</span>
+                                            {p.paymentMethod === 'bank_transfer' ? <Landmark size={14} className="text-slate-500" /> : <Smartphone size={14} className="text-slate-500" />}
+                                            <span className="text-[10px] font-black text-white uppercase tracking-wider">{p.paymentMethod || p.method}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {p.paymentMethod === 'bank_transfer' ? (
-                                            <a href={`${import.meta.env.VITE_API_URL}${p.paymentProof}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline group/link">
-                                                <Eye size={14} /> View Receipt <ExternalLink size={10} className="group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
-                                            </a>
+                                        <p className="text-sm font-black text-emerald-400 font-mono">৳{(p.amount || 0).toLocaleString()}</p>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {activeTab === 'pending' ? (
+                                            p.paymentMethod === 'bank_transfer' ? (
+                                                <a href={`${import.meta.env.VITE_API_URL}${p.paymentProof}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[10px] font-black uppercase text-primary hover:underline">
+                                                    <Eye size={14} /> View Receipt
+                                                </a>
+                                            ) : (
+                                                <p className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-1 rounded inline-block">{p.transactionId}</p>
+                                            )
                                         ) : (
-                                            <span className="text-xs font-mono text-slate-300 bg-white/5 px-2 py-1 rounded">{p.transactionId}</span>
+                                            <div>
+                                                <p className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">{p.transactionId}</p>
+                                                <p className="text-[9px] text-slate-500 font-bold mt-0.5 uppercase tracking-tighter">
+                                                    {new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-xs text-slate-400">
-                                        {new Date(p.createdAt).toLocaleDateString()}
-                                    </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button 
-                                                onClick={() => handleVerify(p._id, p.type, 'paid')}
-                                                disabled={processingId === p._id}
-                                                className="p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500 hover:text-white transition-all shadow-lg hover:shadow-green-500/20"
-                                                title="Approve Payment"
-                                            >
-                                                {processingId === p._id ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
-                                            </button>
-                                            <button 
-                                                onClick={() => handleVerify(p._id, p.type, 'failed')}
-                                                disabled={processingId === p._id}
-                                                className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20"
-                                                title="Reject Payment"
-                                            >
-                                                <XCircle size={18} />
-                                            </button>
-                                        </div>
+                                        {activeTab === 'pending' ? (
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button 
+                                                    onClick={() => handleVerify(p._id, p.type, 'paid')}
+                                                    disabled={processingId === p._id}
+                                                    className="p-2.5 bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500 hover:text-white transition-all shadow-lg hover:shadow-green-500/20"
+                                                    title="Approve Payment"
+                                                >
+                                                    {processingId === p._id ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleVerify(p._id, p.type, 'failed')}
+                                                    disabled={processingId === p._id}
+                                                    className="p-2.5 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20"
+                                                    title="Reject Payment"
+                                                >
+                                                    <XCircle size={18} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-end gap-1.5 text-emerald-400 text-[10px] font-black uppercase">
+                                                <CheckCircle size={14} /> Paid
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
+                        {activeTab === 'history' && filteredHistory.length > 0 && (
+                            <tfoot>
+                                <tr className="bg-white/5 border-t-2 border-white/10">
+                                    <td colSpan="3" className="px-6 py-6 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Grand Total ({filterMonth ? months.find(m => m.value === filterMonth).label : 'Selected Period'}):</td>
+                                    <td colSpan="3" className="px-6 py-6 text-2xl font-black text-emerald-400 font-mono">৳{totalIncome.toLocaleString()}</td>
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
             </div>
 
-            <div className="p-4 bg-orange-500/5 border border-orange-500/20 rounded-2xl flex items-start gap-4">
-                <AlertCircle className="text-orange-500 shrink-0 mt-0.5" size={20} />
-                <div>
-                    <h4 className="text-sm font-bold text-white">Manual Verification Notice</h4>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                        Approving a payment will permanently mark it as "Paid" and activate the associated student record. 
-                        Please ensure the Transaction ID matches your banking records before confirming.
-                    </p>
+            {/* Print Section (Hidden by default) */}
+            <div className="hidden print:block fixed inset-0 bg-white text-black p-12 z-[9999]">
+                <div className="flex justify-between items-start border-b-4 border-black pb-8 mb-8">
+                    <div>
+                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-2">EduConnect Academy</h1>
+                        <p className="text-lg font-bold">Financial Income Audit Report</p>
+                        <p className="text-sm text-gray-600 mt-2 italic font-medium">
+                            Report for: {filterMonth ? months.find(m => m.value === filterMonth).label : 'Full Year'} {filterYear}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <div className="bg-black text-white px-6 py-3 rounded-lg inline-block font-black text-xl mb-2 tracking-widest">AUDIT DOCUMENT</div>
+                        <p className="text-[10px] font-black uppercase tracking-widest mt-2">Generated: {new Date().toLocaleString()}</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8 mb-12">
+                    <div className="border-2 border-black p-6 rounded-2xl relative overflow-hidden">
+                        <h3 className="text-xs font-black uppercase mb-4 text-gray-400 tracking-widest">Transaction Summary</h3>
+                        <div className="space-y-3 relative z-10">
+                            <div className="flex justify-between border-b border-gray-100 pb-2">
+                                <span className="font-bold text-gray-600">Total Count:</span>
+                                <span className="font-black">{filteredHistory.length} Transactions</span>
+                            </div>
+                            <div className="flex justify-between border-b border-gray-100 pb-2">
+                                <span className="font-bold text-gray-600">Applied Filter:</span>
+                                <span className="font-black uppercase text-xs">{searchTerm || 'No Search Filter'}</span>
+                            </div>
+                        </div>
+                        <Banknote className="absolute -bottom-4 -right-4 opacity-5 text-black" size={80} />
+                    </div>
+                    <div className="bg-black text-white p-6 rounded-2xl flex flex-col justify-center items-center shadow-xl">
+                        <h3 className="text-xs font-black uppercase mb-2 opacity-50 tracking-widest">Total Verified Revenue</h3>
+                        <div className="text-5xl font-black font-mono">৳{totalIncome.toLocaleString()}</div>
+                    </div>
+                </div>
+
+                <table className="w-full text-left border-collapse border-2 border-black shadow-lg">
+                    <thead>
+                        <tr className="bg-gray-100 border-b-2 border-black">
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest">Date</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest">Source / ID</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest">Type</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest">Method</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest">Transaction ID</th>
+                            <th className="p-4 text-[10px] font-black uppercase tracking-widest text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredHistory.map((p, i) => (
+                            <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                                <td className="p-4 text-[10px] font-bold">{new Date(p.date).toLocaleDateString()}</td>
+                                <td className="p-4">
+                                    <p className="text-sm font-black leading-tight uppercase">{p.studentName}</p>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">ID: {p.studentId}</p>
+                                </td>
+                                <td className="p-4 text-[10px] font-black uppercase tracking-tighter">{p.type}</td>
+                                <td className="p-4 text-[10px] font-black uppercase">{p.method}</td>
+                                <td className="p-4 text-[10px] font-mono font-bold text-gray-600">{p.transactionId}</td>
+                                <td className="p-4 text-sm font-black text-right font-mono">৳{p.amount.toLocaleString()}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                    <tfoot>
+                        <tr className="bg-black text-white font-black">
+                            <td colSpan="5" className="p-6 text-right uppercase tracking-[0.3em] text-xs">Total Net Revenue for the Period:</td>
+                            <td className="p-6 text-2xl text-right font-mono italic">৳{totalIncome.toLocaleString()}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div className="mt-24 grid grid-cols-2 gap-32">
+                    <div className="border-t-2 border-black pt-4 text-center">
+                        <p className="text-sm font-black uppercase tracking-widest">Finance Director</p>
+                        <p className="text-[10px] text-gray-400 mt-2 uppercase font-bold">Authorized Signature & Seal</p>
+                    </div>
+                    <div className="border-t-2 border-black pt-4 text-center">
+                        <p className="text-sm font-black uppercase tracking-widest">Head of Academy</p>
+                        <p className="text-[10px] text-gray-400 mt-2 uppercase font-bold">Verification & Audit Stamp</p>
+                    </div>
+                </div>
+                
+                <div className="mt-auto pt-20 text-center">
+                    <div className="inline-block border border-gray-200 px-6 py-2 rounded-full">
+                        <p className="text-[9px] text-gray-400 uppercase tracking-[0.4em] font-black">
+                            Official Audit Document • EduConnect Institutional Cloud • Encrypted Transaction Log
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
+
+const KPICard = ({ label, value, icon: Icon, color }) => (
+    <div className="glass-panel p-6 border-white/5 relative overflow-hidden group hover:border-white/10 transition-all duration-500">
+        <div className="flex items-center justify-between mb-4 relative z-10">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{label}</p>
+            <div className={`p-2.5 rounded-2xl bg-white/5 border border-white/5 ${color} group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
+                <Icon size={20} />
+            </div>
+        </div>
+        <p className={`text-2xl font-black ${color} truncate relative z-10`}>{value}</p>
+        
+        {/* Background Decorative Element */}
+        <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-white/[0.02] rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+        <div className={`absolute top-0 left-0 w-1 h-full ${color.replace('text', 'bg')} opacity-20`}></div>
+    </div>
+);
 
 export default AdminPayments;

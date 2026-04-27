@@ -119,55 +119,89 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Helper to shift a student from admissions to main profile database without requiring a user login yet.
+// Helper to shift a student from admissions to main profile database
 const shiftToStudentProfile = async (application) => {
     const studentId = application.studentId;
+    if (!studentId) throw new Error("Application is missing a Student ID. Cannot enroll.");
+
     const profileExists = await StudentProfile.findOne({ studentId });
     if (!profileExists) {
-        await StudentProfile.create({
-            studentId: studentId,
-            firstName: application.firstName || 'Student',
-            lastName: application.lastName || 'Profile',
-            dateOfBirth: application.dateOfBirth || new Date('2010-01-01'),
-            gender: application.gender || 'Other',
-            bloodGroup: application.bloodGroup,
-            religion: application.religion,
-            identificationMarks: application.identificationMarks,
-            medicalRecords: application.medicalRecords,
-            studentPhoto: application.studentPhoto,
-            
-            currentClass: application.applyingForClass || '01',
-            section: 'A',
-            previousSchool: application.previousSchool,
-            previousResultSheet: application.previousResultSheet,
+        const appObj = application.toObject ? application.toObject() : application;
+        
+        // Validate blood group against enum
+        const validBloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+        const bloodGroup = validBloodGroups.includes(appObj.bloodGroup) ? appObj.bloodGroup : undefined;
 
-            fatherName: application.fatherName,
-            fatherPhone: application.fatherPhone,
-            fatherEmail: application.fatherEmail,
-            fatherOccupation: application.fatherOccupation,
-            fatherPhoto: application.fatherPhoto,
+        // Ensure gender is valid for enum
+        const validGenders = ['Male', 'Female', 'Other'];
+        const gender = validGenders.includes(appObj.gender) ? appObj.gender : 'Other';
 
-            motherName: application.motherName,
-            motherPhone: application.motherPhone,
-            motherEmail: application.motherEmail,
-            motherOccupation: application.motherOccupation,
-            motherPhoto: application.motherPhoto,
+        try {
+            await StudentProfile.create({
+                studentId: studentId,
+                firstName: appObj.firstName || 'Student',
+                lastName: appObj.lastName || 'Profile',
+                dateOfBirth: appObj.dateOfBirth || new Date('2010-01-01'),
+                gender: gender,
+                bloodGroup: bloodGroup,
+                religion: appObj.religion,
+                identificationMarks: appObj.identificationMarks,
+                medicalRecords: appObj.medicalRecords,
+                studentPhoto: appObj.studentPhoto,
+                
+                currentClass: appObj.applyingForClass || '01',
+                section: 'A',
+                previousSchool: appObj.previousSchool,
+                previousResultSheet: appObj.previousResultSheet,
 
-            guardianName: application.guardianName || application.fatherName || 'Guardian',
-            guardianPhone: application.guardianPhone || application.fatherPhone || 'N/A',
-            guardianEmail: application.guardianEmail || application.fatherEmail || '',
-            guardianRelation: application.guardianRelation,
-            guardianOccupation: application.guardianOccupation,
-            guardianPhoto: application.guardianPhoto,
+                fatherName: appObj.fatherName,
+                fatherPhone: appObj.fatherPhone,
+                fatherEmail: appObj.fatherEmail,
+                fatherOccupation: appObj.fatherOccupation,
+                fatherPhoto: appObj.fatherPhoto,
 
-            address: typeof application.presentAddress === 'string' ? JSON.parse(application.presentAddress).details : application.presentAddress?.details || 'N/A',
-            presentAddress: typeof application.presentAddress === 'string' ? JSON.parse(application.presentAddress) : application.presentAddress,
-            permanentAddress: typeof application.permanentAddress === 'string' ? JSON.parse(application.permanentAddress) : application.permanentAddress,
-            
-            documentsPdf: application.documentsPdf,
+                motherName: appObj.motherName,
+                motherPhone: appObj.motherPhone,
+                motherEmail: appObj.motherEmail,
+                motherOccupation: appObj.motherOccupation,
+                motherPhoto: appObj.motherPhoto,
 
-            status: 'active'
-        });
+                guardianName: appObj.guardianName || appObj.fatherName || 'Guardian',
+                guardianPhone: appObj.guardianPhone || appObj.fatherPhone || 'N/A',
+                guardianEmail: appObj.guardianEmail || appObj.fatherEmail || '',
+                guardianRelation: appObj.guardianRelation,
+                guardianOccupation: appObj.guardianOccupation,
+                guardianPhoto: appObj.guardianPhoto,
+
+                address: appObj.presentAddress?.details || 'N/A',
+                presentAddress: {
+                    district: appObj.presentAddress?.district,
+                    division: appObj.presentAddress?.division,
+                    thana: appObj.presentAddress?.thana,
+                    postOffice: appObj.presentAddress?.postOffice,
+                    details: appObj.presentAddress?.details
+                },
+                permanentAddress: {
+                    district: appObj.permanentAddress?.district,
+                    division: appObj.permanentAddress?.division,
+                    thana: appObj.permanentAddress?.thana,
+                    postOffice: appObj.permanentAddress?.postOffice,
+                    details: appObj.permanentAddress?.details
+                },
+                
+                documentsPdf: appObj.documentsPdf,
+
+                status: 'active',
+                registrationPaymentStatus: appObj.paymentStatus === 'paid' ? 'paid' : 'pending',
+                paymentMethod: appObj.paymentMethod,
+                transactionId: appObj.transactionId,
+                paymentProof: appObj.paymentProof,
+                paymentIntentId: appObj.paymentIntentId
+            });
+        } catch (err) {
+            console.error("StudentProfile Create Error:", err);
+            throw new Error(`Profile creation failed: ${err.message}`);
+        }
     }
 };
 
@@ -191,7 +225,7 @@ router.patch('/approve-all-pending', async (req, res) => {
         res.json({ message: `Successfully approved and auto-enrolled ${approvedCount} students.` });
     } catch (error) {
         console.error("Bulk Approve Error:", error);
-        res.status(500).json({ message: 'Server error during bulk approval', error: error.message });
+        res.status(500).json({ message: `Bulk approval failed: ${error.message}` });
     }
 });
 
@@ -219,7 +253,10 @@ router.patch('/:id/status', async (req, res) => {
         res.json({ message: 'Status updated successfully', application });
     } catch (error) {
         console.error("Status Update/Enrollment Error:", error);
-        res.status(500).json({ message: 'Server error during update', error: error.message });
+        res.status(500).json({ 
+            message: `Update failed: ${error.message}`,
+            error: error.message
+        });
     }
 });
 

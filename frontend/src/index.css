@@ -70,6 +70,18 @@
     background-color: #3b82f6;
     color: white;
   }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-fade-in-right {
+    animation: fadeInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 }
 
 /* Custom Scrollbar */
@@ -166,12 +178,6 @@
     border-radius: 0 !important;
   }
 
-  .animate-fade-in-up, .animate-fade-in {
-    animation: none !important;
-    transform: none !important;
-    opacity: 1 !important;
-  }
-
   .overflow-x-auto {
     overflow: visible !important;
   }
@@ -180,3 +186,32 @@
     max-width: 100% !important;
   }
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Custom Scrollbar */

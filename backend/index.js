@@ -1,7 +1,3 @@
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
-dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -62,7 +58,13 @@ io.on("connection", (socket) => {
 });
 
 // Middleware
-app.use(express.json());
+app.use(express.json({
+    verify: (req, res, buf) => {
+        if (req.originalUrl.startsWith('/api/payments/webhook')) {
+            req.rawBody = buf;
+        }
+    }
+}));
 app.use(cors({
     origin: '*', // Allow all origins for easier testing temporarily
     credentials: true
@@ -92,9 +94,11 @@ app.use('/api/classrooms', require('./routes/classroomRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/subjects', require('./routes/subjectRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
-// app.use('/api/timetable', require('./routes/timetableRoutes'));
+app.use('/api/timetable', require('./routes/timetableRoutes'));
 app.use('/api/bus-routes', require('./routes/busRouteRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
+app.use('/api/expenses', require('./routes/expenseRoutes'));
+
 
 // Start Cron Jobs
 const { markLateAssignments } = require('./cron/assignmentsCron');

@@ -6,7 +6,9 @@ const {
     createPaymentIntent, 
     submitManualPayment, 
     getPendingPayments, 
-    verifyPayment 
+    verifyPayment,
+    handleWebhook,
+    getIncomeHistory
 } = require('../controllers/paymentController');
 
 // Multer config for payment proof (receipts)
@@ -21,6 +23,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+// Stripe Webhook
+router.post('/webhook', handleWebhook);
+
 // Stripe Payment Intent
 router.post('/create-payment-intent', createPaymentIntent);
 
@@ -32,5 +37,8 @@ router.get('/pending', getPendingPayments);
 
 // Admin: Approve/Reject payment
 router.post('/verify', verifyPayment);
+
+// Admin: Get full income history for reporting
+router.get('/income-history', getIncomeHistory);
 
 module.exports = router;

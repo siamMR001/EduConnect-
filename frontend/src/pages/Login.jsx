@@ -299,7 +299,6 @@ const Login = () => {
             <PaymentModal 
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}
-                amount={5000} // $50.00
                 studentId={formData.studentId}
                 studentData={{ name: formData.name }}
                 type="registration"

@@ -592,14 +592,22 @@ const Dashboard = () => {
                                             <td className="py-4 px-4 font-mono text-primary-light">{app.studentId}</td>
                                             <td className="py-4 px-4 text-white font-medium">{app.firstName} {app.lastName}</td>
                                             <td className="py-4 px-4 text-slate-300">Class {app.applyingForClass}</td>
-                                            <td className="py-4 px-4">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize
-                                                    ${app.status === 'approved' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                                                        app.status === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                                                            'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'}`}>
-                                                    {app.status}
-                                                </span>
-                                            </td>
+                                             <td className="py-4 px-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit
+                                                        ${app.status === 'approved' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                                            app.status === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                                                'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'}`}>
+                                                        {app.status}
+                                                    </span>
+                                                    <span className={`px-3 py-0.5 rounded-full text-[9px] font-medium w-fit
+                                                        ${app.paymentStatus === 'paid' ? 'text-emerald-400' : 
+                                                          app.paymentStatus === 'pending_verification' ? 'text-amber-400' : 'text-slate-500'}`}>
+                                                        {app.paymentStatus === 'paid' ? '✓ Paid' : 
+                                                         app.paymentStatus === 'pending_verification' ? '⌛ Verification' : '○ Unpaid'}
+                                                    </span>
+                                                </div>
+                                             </td>
                                             <td className="py-4 px-4 text-right">
                                                 <button
                                                     onClick={() => setSelectedApplication(app)}

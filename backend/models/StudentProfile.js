@@ -72,9 +72,10 @@ const studentProfileSchema = new mongoose.Schema({
         enum: ['pending', 'paid', 'failed', 'pending_verification'],
         default: 'pending'
     },
+    admissionAmount: { type: Number, default: 0 },
     paymentMethod: {
         type: String,
-        enum: ['stripe', 'apple_pay', 'google_pay', 'bkash', 'rocket', 'nagad', 'bank_transfer']
+        enum: ['stripe', 'stripe_mock', 'stripe_checkout', 'apple_pay', 'google_pay', 'bkash', 'rocket', 'nagad', 'bank_transfer']
     },
     transactionId: { type: String },
     paymentProof: { type: String }, // File path for bank receipt

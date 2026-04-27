@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Settings, Mail, Clock, DollarSign, CheckCircle } from 'lucide-react';
+import { Save, Settings, Mail, Clock, Banknote, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 
 export default function AdminSettings() {
@@ -69,13 +69,13 @@ export default function AdminSettings() {
                 <div className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-emerald-500/10 transition-colors"></div>
                     <div className="flex items-center gap-3 mb-6">
-                        <DollarSign className="w-5 h-5 text-emerald-400" />
+                        <Banknote className="w-5 h-5 text-emerald-400" />
                         <h2 className="text-xl font-bold text-white">Financial Configuration</h2>
                     </div>
                     <div className="max-w-xs">
                         <label className="block text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Default Admission Fee</label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">BDT</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">৳</span>
                             <input 
                                 type="number" 
                                 value={settings.admissionFee}
@@ -87,7 +87,7 @@ export default function AdminSettings() {
                     <div className="max-w-xs mt-4">
                         <label className="block text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Monthly Bus Fare</label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">BDT</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">৳</span>
                             <input 
                                 type="number" 
                                 value={settings.monthlyBusFare}
@@ -99,7 +99,7 @@ export default function AdminSettings() {
                     <div className="max-w-xs mt-4">
                         <label className="block text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Bus Fine Per Day (After 6 Months)</label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">BDT</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">৳</span>
                             <input 
                                 type="number" 
                                 value={settings.busFinePerDay}

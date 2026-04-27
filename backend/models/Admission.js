@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const admissionSchema = new mongoose.Schema({
     studentId: { type: String, unique: true }, // Format: YYCCSSSS (Year, Class, Sequence)
     applyingForClass: { type: String, required: true }, // e.g., '07'
+    amount: { type: Number, default: 0 },
 
     // Personal Info
     firstName: { type: String },
@@ -71,7 +72,7 @@ const admissionSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['stripe', 'apple_pay', 'google_pay', 'bkash', 'rocket', 'nagad', 'bank_transfer']
+        enum: ['stripe', 'stripe_mock', 'stripe_checkout', 'apple_pay', 'google_pay', 'bkash', 'rocket', 'nagad', 'bank_transfer']
     },
     transactionId: { type: String },
     paymentProof: { type: String }, // File path for bank receipt

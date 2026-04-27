@@ -65,6 +65,17 @@ const StripeTab = ({ clientSecret, onSuccess, onCancel, amount }) => {
 
     const handleCardSubmit = async (event) => {
         event.preventDefault();
+        
+        // --- DEVELOPMENT MODE FALLBACK ---
+        if (clientSecret && clientSecret.startsWith('pi_mock_secret_')) {
+            setProcessing(true);
+            setTimeout(() => {
+                setProcessing(false);
+                onSuccess('mock_intent_' + Date.now(), 'stripe_mock');
+            }, 1500);
+            return;
+        }
+
         if (!stripe || !elements) return;
 
         setProcessing(true);
@@ -116,7 +127,7 @@ const StripeTab = ({ clientSecret, onSuccess, onCancel, amount }) => {
                 )}
 
                 <button type="submit" disabled={!stripe || processing} className="w-full btn-primary py-3 flex items-center justify-center gap-2">
-                    {processing ? <><Loader2 size={20} className="animate-spin" /> Processing...</> : <><Lock size={18} /> Pay ${(amount / 100).toFixed(2)} & Register</>}
+                    {processing ? <><Loader2 size={20} className="animate-spin" /> Processing...</> : <><Lock size={18} /> Pay ৳{(amount / 100).toFixed(2)} & Register</>}
                 </button>
             </form>
         </div>
@@ -180,7 +191,7 @@ const MobileTab = ({ amount, studentId, type, onSuccess, onCancel }) => {
                 <p className="text-xl font-bold text-white tracking-wider text-center py-2 bg-black/20 rounded-lg border border-white/5">{accounts[method]}</p>
                 <div className="flex gap-2 text-[10px] text-slate-400">
                     <Info size={12} className="shrink-0 text-primary" />
-                    <p>Send <b>${(amount / 100).toFixed(2)}</b> (converted to BDT) via "Send Money" and enter the Transaction ID below.</p>
+                    <p>Send <b>৳{(amount / 100).toFixed(2)}</b> via "Send Money" and enter the Transaction ID below.</p>
                 </div>
             </div>
 
@@ -216,7 +227,7 @@ const BankTab = ({ amount, studentData, studentId, type, onSuccess }) => {
         doc.text(`Student ID: ${studentId}`, 20, 60);
         doc.text(`Student Name: ${studentData?.name || 'N/A'}`, 20, 70);
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 80);
-        doc.text(`Amount to Pay: $${(amount / 100).toFixed(2)}`, 20, 90);
+        doc.text(`Amount to Pay: ৳${(amount / 100).toFixed(2)}`, 20, 90);
 
         doc.setFontSize(14);
         doc.text("BANK DETAILS", 20, 110);
@@ -318,7 +329,7 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
             fetch(`${import.meta.env.VITE_API_URL}/api/payments/create-payment-intent`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount, currency: 'usd' }),
+                body: JSON.stringify({ amount, currency: 'usd', studentId, type }),
             })
             .then(res => res.json())
             .then(data => {
@@ -358,7 +369,7 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
                         <h3 className="text-2xl font-bold text-white">Payment Submitted!</h3>
                         <p className="text-slate-400">
                             {['stripe', 'apple_pay', 'google_pay'].includes(paymentMethodUsed) 
-                                ? 'Your account has been activated successfully.' 
+                                ? 'Your payment was successful and your account has been updated.' 
                                 : 'Our admin will verify your payment and activate your account shortly.'}
                         </p>
                     </div>
@@ -389,7 +400,7 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
                         {/* Amount Bar */}
                         <div className="px-6 py-3 bg-black/20 border-b border-white/5 flex items-center justify-between">
                             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-tighter">Registration Fees</span>
-                            <span className="text-sm font-bold text-primary-light">${(amount / 100).toFixed(2)}</span>
+                            <span className="text-sm font-bold text-primary-light">৳{(amount / 100).toFixed(2)}</span>
                         </div>
 
                         <div className="p-6">
