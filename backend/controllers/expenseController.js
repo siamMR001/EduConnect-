@@ -1,6 +1,7 @@
 const Expense = require('../models/Expense');
 const Admission = require('../models/Admission');
 const StudentProfile = require('../models/StudentProfile');
+const Payment = require('../models/Payment');
 
 exports.createExpense = async (req, res) => {
     try {
@@ -67,20 +68,29 @@ exports.getFinancialStats = async (req, res) => {
             const startOfMonth = new Date(loopYear, monthIdx, 1);
             const endOfMonth = new Date(loopYear, monthIdx + 1, 0);
 
-            // Income
+            // --- Unified Income Calculation ---
+            // 1. Admissions
             const admissions = await Admission.find({
                 paymentStatus: 'paid',
                 createdAt: { $gte: startOfMonth, $lte: endOfMonth }
             });
-            const incomeAdmissions = admissions.reduce((sum, a) => sum + (a.amount || 500), 0);
+            const incomeAdmissions = admissions.reduce((sum, a) => sum + (a.admissionFee || a.amount || 0), 0);
 
+            // 2. Profiles (Older system fallback)
             const profiles = await StudentProfile.find({
                 registrationPaymentStatus: 'paid',
                 createdAt: { $gte: startOfMonth, $lte: endOfMonth }
             });
-            const incomeProfiles = profiles.reduce((sum, p) => sum + (p.admissionAmount || 500), 0);
+            const incomeProfiles = profiles.reduce((sum, p) => sum + (p.admissionAmount || 0), 0);
 
-            const totalIncome = incomeAdmissions + incomeProfiles;
+            // 3. New Monthly Payments / Fees
+            const payments = await Payment.find({
+                status: 'Paid',
+                paidAt: { $gte: startOfMonth, $lte: endOfMonth }
+            });
+            const incomeGeneral = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+            const totalIncome = incomeAdmissions + incomeProfiles + incomeGeneral;
 
             // Expenses
             const expenses = await Expense.find({

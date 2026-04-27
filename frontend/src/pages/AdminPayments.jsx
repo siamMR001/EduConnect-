@@ -18,7 +18,7 @@ const AdminPayments = () => {
     
     // Filters for Income Report
     const [filterMonth, setFilterMonth] = useState('');
-    const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
+    const [filterYear, setFilterYear] = useState('');
 
     const months = [
         { value: '', label: 'All Months' },
@@ -66,6 +66,7 @@ const AdminPayments = () => {
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/income-history`);
             const data = await res.json();
+            console.log("--- Income History Data Received ---", data);
             if (res.ok) {
                 setIncomeHistory(data);
             }
