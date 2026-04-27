@@ -2,19 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { 
     Elements, 
-    CardElement, 
+    CardNumberElement,
+    CardExpiryElement,
+    CardCvcElement,
     useStripe, 
     useElements,
     PaymentRequestButtonElement 
 } from '@stripe/react-stripe-js';
 import { 
     X, CreditCard, Lock, AlertCircle, Loader2, 
-    Smartphone, Landmark, Download, Upload, 
-    CheckCircle, ChevronRight, Copy, Info
+    CheckCircle, ChevronRight, Landmark, Copy, Info, Download
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const StripeTab = ({ clientSecret, onSuccess, onCancel, amount }) => {
     const stripe = useStripe();
@@ -26,10 +27,10 @@ const StripeTab = ({ clientSecret, onSuccess, onCancel, amount }) => {
     useEffect(() => {
         if (stripe) {
             const pr = stripe.paymentRequest({
-                country: 'US', // Adjust as needed
+                country: 'US', 
                 currency: 'usd',
                 total: {
-                    label: 'Registration Fee',
+                    label: 'Admission Fee',
                     amount: amount,
                 },
                 requestPayerName: true,
@@ -51,6 +52,7 @@ const StripeTab = ({ clientSecret, onSuccess, onCancel, amount }) => {
 
                 if (confirmError) {
                     ev.complete('fail');
+                    setError(confirmError.message);
                 } else {
                     ev.complete('success');
                     if (paymentIntent.status === "requires_action") {
@@ -61,7 +63,7 @@ const StripeTab = ({ clientSecret, onSuccess, onCancel, amount }) => {
                 }
             });
         }
-    }, [stripe, amount, clientSecret]);
+    }, [stripe, amount, clientSecret, onSuccess]);
 
     const handleCardSubmit = async (event) => {
         event.preventDefault();
@@ -83,7 +85,7 @@ const StripeTab = ({ clientSecret, onSuccess, onCancel, amount }) => {
 
         const payload = await stripe.confirmCardPayment(clientSecret, {
             payment_method: {
-                card: elements.getElement(CardElement),
+                card: elements.getElement(CardNumberElement),
             },
         });
 
@@ -99,34 +101,71 @@ const StripeTab = ({ clientSecret, onSuccess, onCancel, amount }) => {
         <div className="space-y-6 animate-fade-in">
             {paymentRequest && (
                 <div className="space-y-4">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fast Checkout</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Fast Checkout</label>
                     <PaymentRequestButtonElement options={{ paymentRequest }} />
-                    <div className="relative">
+                    <div className="relative py-2">
                         <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-                        <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#121228] px-2 text-slate-500">Or Pay with Card</span></div>
+                        <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="bg-[#121228] px-3 text-slate-500 font-medium">Or pay with card</span></div>
                     </div>
                 </div>
             )}
 
             <form onSubmit={handleCardSubmit} className="space-y-6">
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                    <label className="block text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
-                        <CreditCard size={16} className="text-primary" />
-                        Credit or Debit Card
-                    </label>
-                    <div className="p-3 bg-black/20 rounded-lg border border-white/5 focus-within:border-primary/50 transition-colors">
-                        <CardElement options={{ style: { base: { fontSize: '16px', color: '#ffffff', '::placeholder': { color: '#aab7c4' } }, invalid: { color: '#ef4444' } } }} />
+                <div className="space-y-4">
+                    <div className="p-6 bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-2xl shadow-2xl space-y-5">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <CreditCard size={14} className="text-primary" />
+                                Secure Card Details
+                            </label>
+                            <div className="flex items-center gap-1">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png" alt="Visa" className="h-2.5 opacity-40" />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" alt="Mastercard" className="h-3.5 opacity-40" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] text-slate-500 uppercase font-bold ml-1">Card Number</label>
+                                <div className="p-4 bg-black/40 rounded-xl border border-white/5 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                                    <CardNumberElement options={{ style: { base: { fontSize: '16px', color: '#ffffff', '::placeholder': { color: '#475569' } } } }} />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] text-slate-500 uppercase font-bold ml-1">Expiry Date</label>
+                                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                                        <CardExpiryElement options={{ style: { base: { fontSize: '16px', color: '#ffffff', '::placeholder': { color: '#475569' } } } }} />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] text-slate-500 uppercase font-bold ml-1">CVC</label>
+                                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                                        <CardCvcElement options={{ style: { base: { fontSize: '16px', color: '#ffffff', '::placeholder': { color: '#475569' } } } }} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between pt-2">
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                                <Lock size={10} className="text-green-500/70" />
+                                256-bit SSL Encryption
+                            </div>
+                            <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">PCI DSS Compliant</span>
+                        </div>
                     </div>
                 </div>
 
                 {error && (
-                    <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm">
-                        <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                        <span>{error}</span>
+                    <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs animate-shake">
+                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                        <span className="leading-relaxed font-medium">{error}</span>
                     </div>
                 )}
 
-                <button type="submit" disabled={!stripe || processing} className="w-full btn-primary py-3 flex items-center justify-center gap-2">
+                <button type="submit" disabled={!stripe || processing} className="w-full btn-primary py-4 flex items-center justify-center gap-2 font-bold tracking-wider uppercase transition-all active:scale-95">
                     {processing ? <><Loader2 size={20} className="animate-spin" /> Processing...</> : <><Lock size={18} /> Pay ৳{(amount / 100).toFixed(2)} & Register</>}
                 </button>
             </form>
@@ -299,7 +338,7 @@ const BankTab = ({ amount, studentData, studentId, type, onSuccess }) => {
                         {file ? (
                             <><CheckCircle size={20} className="text-green-500 mb-1" /><span className="text-[10px] text-green-400 truncate px-4">{file.name}</span></>
                         ) : (
-                            <><Upload size={20} className="text-slate-500 mb-1" /><span className="text-[10px] text-slate-500">Click to upload Receipt (Image/PDF)</span></>
+                            <><Download size={20} className="text-slate-500 mb-1" /><span className="text-[10px] text-slate-500">Click or drag receipt here</span></>
                         )}
                     </div>
                 </div>
@@ -316,9 +355,9 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
     const [clientSecret, setClientSecret] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [activeTab, setActiveTab] = useState('card');
     const [successState, setSuccessState] = useState(false);
     const [paymentMethodUsed, setPaymentMethodUsed] = useState('');
+    const [activeTab, setActiveTab] = useState('stripe');
 
     useEffect(() => {
         if (isOpen) {
@@ -339,7 +378,7 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
             .catch(() => setError('Server Connection Failed'))
             .finally(() => setLoading(false));
         }
-    }, [isOpen, amount]);
+    }, [isOpen, amount, studentId, type]);
 
     const handleSuccess = (intentId, method) => {
         setPaymentMethodUsed(method);
@@ -366,9 +405,9 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
                         <div className="mx-auto w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center border border-green-500/30">
                             <CheckCircle size={40} className="text-green-500" />
                         </div>
-                        <h3 className="text-2xl font-bold text-white">Payment Submitted!</h3>
+                        <h3 className="text-2xl font-bold text-white">Payment Successful!</h3>
                         <p className="text-slate-400">
-                            {['stripe', 'apple_pay', 'google_pay'].includes(paymentMethodUsed) 
+                            {['stripe', 'apple_pay', 'google_pay', 'stripe_mock'].includes(paymentMethodUsed) 
                                 ? 'Your payment was successful and your account has been updated.' 
                                 : 'Our admin will verify your payment and activate your account shortly.'}
                         </p>
@@ -376,29 +415,29 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
                 ) : (
                     <div className="p-0">
                         {/* Header */}
-                        <div className="p-6 pb-2 flex items-center justify-between">
+                        <div className="p-6 pb-4 flex items-center justify-between border-b border-white/5">
                             <div>
                                 <h2 className="text-xl font-bold text-white tracking-tight">Professional Payment Portal</h2>
-                                <p className="text-xs text-slate-400">Select your preferred method to proceed</p>
+                                <p className="text-xs text-slate-400">Secure encrypted payment gateway</p>
                             </div>
                             <button onClick={onClose} className="p-2 text-slate-500 hover:text-white rounded-full transition-colors"><X size={20} /></button>
                         </div>
 
-                        {/* Tabs */}
-                        <div className="flex px-6 gap-6 border-b border-white/5">
+                        {/* Method Tabs */}
+                        <div className="flex p-1 bg-black/20 mx-6 mt-4 rounded-xl">
                             {[
-                                { id: 'card', label: 'Card / Wallets', icon: CreditCard },
-                                { id: 'mobile', label: 'Mobile Banking', icon: Smartphone },
-                                { id: 'bank', label: 'Bank Transfer', icon: Landmark }
-                            ].map(tab => (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`py-4 text-xs font-bold uppercase tracking-widest flex items-center gap-2 border-b-2 transition-all ${activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
-                                    <tab.icon size={14} /> {tab.label}
+                                { id: 'stripe', label: 'Card' },
+                                { id: 'mobile', label: 'MFS' },
+                                { id: 'bank', label: 'Bank' }
+                            ].map(t => (
+                                <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === t.id ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                                    {t.label}
                                 </button>
                             ))}
                         </div>
 
                         {/* Amount Bar */}
-                        <div className="px-6 py-3 bg-black/20 border-b border-white/5 flex items-center justify-between">
+                        <div className="px-6 py-3 bg-black/20 mt-4 border-y border-white/5 flex items-center justify-between">
                             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-tighter">Registration Fees</span>
                             <span className="text-sm font-bold text-primary-light">৳{(amount / 100).toFixed(2)}</span>
                         </div>
@@ -406,20 +445,24 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
                         <div className="p-6">
                             {loading ? (
                                 <div className="py-12 flex flex-col items-center gap-4">
-                                    <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                    <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                                     <p className="text-xs text-slate-400 font-medium tracking-widest uppercase">Initializing Secure Gateway...</p>
                                 </div>
                             ) : error ? (
-                                <div className="py-8 text-center"><AlertCircle size={40} className="mx-auto text-red-500 mb-4" /><p className="text-slate-400">{error}</p></div>
+                                <div className="py-8 text-center">
+                                    <AlertCircle size={40} className="mx-auto text-red-500 mb-4" />
+                                    <p className="text-slate-400">{error}</p>
+                                    <button onClick={() => window.location.reload()} className="mt-4 text-xs text-primary hover:underline">Retry Connection</button>
+                                </div>
                             ) : (
                                 <>
-                                    {activeTab === 'card' && (
+                                    {activeTab === 'stripe' && (
                                         <Elements stripe={stripePromise}>
                                             <StripeTab clientSecret={clientSecret} amount={amount} onSuccess={handleSuccess} onCancel={onClose} />
                                         </Elements>
                                     )}
                                     {activeTab === 'mobile' && (
-                                        <MobileTab amount={amount} studentId={studentId} type={type} onSuccess={handleSuccess} />
+                                        <MobileTab amount={amount} studentId={studentId} type={type} onSuccess={handleSuccess} onCancel={onClose} />
                                     )}
                                     {activeTab === 'bank' && (
                                         <BankTab amount={amount} studentId={studentId} studentData={studentData} type={type} onSuccess={handleSuccess} />
@@ -429,9 +472,15 @@ const PaymentModal = ({ isOpen, onClose, amount, studentId, studentData, type = 
                         </div>
 
                         <div className="p-4 bg-black/30 text-center border-t border-white/5">
-                            <p className="text-[9px] text-slate-600 uppercase tracking-[0.2em] flex items-center justify-center gap-1">
-                                <Lock size={10} /> PCI DSS Level 1 Encrypted & Secure
-                            </p>
+                            <div className="flex flex-col gap-2 items-center">
+                                <p className="text-[9px] text-slate-600 uppercase tracking-[0.2em] flex items-center justify-center gap-1">
+                                    <Lock size={10} /> PCI DSS Level 1 Compliant & Secure
+                                </p>
+                                <div className="flex items-center gap-3 opacity-20 grayscale brightness-200">
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png" alt="Visa" className="h-2.5" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" alt="Mastercard" className="h-4" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -23,6 +23,7 @@ const admissionSchema = new mongoose.Schema({
     fatherOccupation: { type: String },
     fatherPhoto: { type: String }, // File path
 
+    // Mother's Info
     motherName: { type: String },
     motherPhone: { type: String },
     motherEmail: { type: String },
@@ -67,7 +68,7 @@ const admissionSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ['paid', 'unpaid', 'pending_verification'],
+        enum: ['pending', 'paid', 'unpaid', 'pending_verification'],
         default: 'unpaid'
     },
     paymentMethod: {
@@ -77,6 +78,7 @@ const admissionSchema = new mongoose.Schema({
     transactionId: { type: String },
     paymentProof: { type: String }, // File path for bank receipt
     paymentIntentId: { type: String },
+    stripeSessionId: { type: String, unique: true, sparse: true }, // To prevent re-processing
     createdAt: { type: Date, default: Date.now }
 });
 

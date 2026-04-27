@@ -1,6 +1,7 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Admission = require('../models/Admission');
 const StudentProfile = require('../models/StudentProfile');
+const Payment = require('../models/Payment');
 const sendEmail = require('../utils/emailService');
 const { getPaymentSuccessEmail } = require('../utils/emailTemplates');
 
@@ -111,6 +112,73 @@ exports.handleWebhook = async (req, res) => {
     }
 
     res.json({ received: true });
+};
+
+// --- STASHED CHANGES FUNCTIONS ---
+
+exports.createCheckoutSession = async (req, res) => {
+    try {
+        const { amount, studentId, email } = req.body;
+
+        if (!studentId) {
+            return res.status(400).json({ message: 'Student ID is required for payment.' });
+        }
+
+        console.log(`Creating Checkout Session for Student: ${studentId}, Email: ${email}`);
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: 'EduConnect Admission Fee',
+                            description: `Admission fee for Student ID: ${studentId}`,
+                        },
+                        unit_amount: amount || 5000,
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            client_reference_id: studentId,
+            customer_email: email || undefined, // Stripe fails if empty string
+            success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/registration-success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/apply`,
+            metadata: {
+                studentId: studentId
+            }
+        });
+
+        console.log(`Checkout Session created: ${session.id}`);
+        res.status(200).json({ url: session.url });
+    } catch (error) {
+        console.error('CRITICAL: Stripe Checkout Session Creation Failed:', error);
+        res.status(500).json({ 
+            message: 'Internal Server Error while initializing payment.', 
+            error: error.message 
+        });
+    }
+};
+
+exports.verifyCheckoutSession = async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status === 'paid') {
+            res.status(200).json({ 
+                success: true, 
+                studentId: session.client_reference_id || session.metadata.studentId 
+            });
+        } else {
+            res.status(400).json({ success: false, message: 'Payment not completed' });
+        }
+    } catch (error) {
+        console.error('Error verifying checkout session:', error);
+        res.status(500).json({ message: 'Error verifying payment', error: error.message });
+    }
 };
 
 exports.submitManualPayment = async (req, res) => {
@@ -234,5 +302,96 @@ exports.getIncomeHistory = async (req, res) => {
     } catch (error) {
         console.error('Income History Error:', error);
         res.status(500).json({ message: 'Error fetching income history' });
+    }
+};
+
+exports.createStudentCheckoutSession = async (req, res) => {
+    try {
+        const { studentId, paymentType, month, year, amount, email } = req.body;
+
+        if (!studentId || !paymentType || !month || !year || !amount) {
+            return res.status(400).json({ message: 'Missing required payment fields.' });
+        }
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: `School Payment: ${paymentType}`,
+                            description: `${month} ${year} - Student ID: ${studentId}`,
+                        },
+                        unit_amount: Math.round(amount * 100), // Stripe expects cents
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            client_reference_id: studentId,
+            customer_email: email || undefined,
+            success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payments?status=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payments?status=cancelled`,
+            metadata: {
+                studentId,
+                paymentType,
+                month,
+                year,
+                amount: amount.toString()
+            }
+        });
+
+        res.status(200).json({ url: session.url });
+    } catch (error) {
+        console.error('Student Checkout Error:', error);
+        res.status(500).json({ message: 'Error initializing payment session', error: error.message });
+    }
+};
+
+exports.verifyStudentPayment = async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        
+        // Check if already processed
+        const existing = await Payment.findOne({ stripeSessionId: sessionId });
+        if (existing) {
+            return res.status(200).json({ success: true, message: 'Already processed' });
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status === 'paid') {
+            const { studentId, paymentType, month, year, amount } = session.metadata;
+
+            const payment = await Payment.create({
+                studentId,
+                paymentType,
+                month,
+                year,
+                amount: parseFloat(amount),
+                status: 'Paid',
+                stripeSessionId: sessionId,
+                stripePaymentIntentId: session.payment_intent,
+                paidAt: new Date()
+            });
+
+            res.status(200).json({ success: true, payment });
+        } else {
+            res.status(400).json({ success: false, message: 'Payment not paid' });
+        }
+    } catch (error) {
+        console.error('Verify Student Payment Error:', error);
+        res.status(500).json({ message: 'Error verifying payment', error: error.message });
+    }
+};
+
+exports.getStudentPayments = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const payments = await Payment.find({ studentId }).sort({ createdAt: -1 });
+        res.status(200).json(payments);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching payment history' });
     }
 };

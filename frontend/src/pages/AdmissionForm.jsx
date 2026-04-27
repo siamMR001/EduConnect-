@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, ChevronRight, CheckCircle, School, AlertCircle, Upload, CreditCard, Lock } from 'lucide-react';
-import PaymentModal from '../components/PaymentModal';
+import { UserPlus, ChevronRight, CheckCircle, School, AlertCircle, Upload, CreditCard, Lock, Loader2 } from 'lucide-react';
 
 // Helper for rendering inputs
 const Input = ({ label, name, type = "text", req = false, isFile = false, multi = false, acc, formData, handleChange, handleFileChange, fileValue }) => {
@@ -77,10 +76,8 @@ const AdmissionForm = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [successData, setSuccessData] = useState(null);
     const [error, setError] = useState(null);
-    const [currentStep, setCurrentStep] = useState(1);
     const [admissionFee, setAdmissionFee] = useState(500);
-    const [previewStudentId, setPreviewStudentId] = useState('');
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [isGeneratingId, setIsGeneratingId] = useState(false);
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/settings`)
@@ -117,34 +114,23 @@ const AdmissionForm = () => {
 
     const handleProceedToPayment = async (e) => {
         e.preventDefault();
-
-        try {
-            // Fetch preview ID from backend
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/generate-id?classCode=${formData.applyingForClass}`);
-            const data = await res.json();
-            if (res.ok && data.studentId) {
-                setPreviewStudentId(data.studentId);
-                setIsPaymentModalOpen(true); // Open real Stripe modal instead of jumping to step 2
-            } else {
-                setError('Failed to generate preview Student ID');
-            }
-        } catch (err) {
-            console.error('Failed to generate ID', err);
-            setError('Failed to reach backend API');
-        }
-    };
-
-    const handlePaymentSuccess = async (paymentIntentId, method) => {
-        setIsPaymentModalOpen(false);
-        handlePaymentConfirm(paymentIntentId, method);
-    };
-
-    const handlePaymentConfirm = async (paymentIntentId, method) => {
         setIsSubmitting(true);
         setError(null);
+        setIsGeneratingId(true);
 
         try {
-            let submitData = { ...formData, studentId: previewStudentId }; // Append the generated ID
+            // 1. Fetch preview ID from backend
+            const idRes = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions/generate-id?classCode=${formData.applyingForClass}`);
+            const idData = await idRes.json();
+            
+            if (!idRes.ok || !idData.studentId) {
+                throw new Error('Failed to generate preview Student ID');
+            }
+
+            const currentStudentId = idData.studentId;
+
+            // 2. Prepare Form Data for submission
+            let submitData = { ...formData, studentId: currentStudentId };
             let submitFiles = { ...files };
 
             if (guardianIs === 'father') {
@@ -164,8 +150,6 @@ const AdmissionForm = () => {
             }
 
             const submissionData = new FormData();
-
-            // Append Text Fields
             Object.keys(submitData).forEach(key => {
                 if (key === 'presentAddress' || key === 'permanentAddress') {
                     submissionData.append(key, JSON.stringify(submitData[key]));
@@ -173,16 +157,11 @@ const AdmissionForm = () => {
                     submissionData.append(key, submitData[key] || '');
                 }
             });
-            const isInstant = ['stripe', 'apple_pay', 'google_pay'].includes(method);
-            submissionData.append('paymentStatus', isInstant ? 'paid' : 'pending_verification');
-            submissionData.append('paymentMethod', method);
+
+            submissionData.append('paymentMethod', 'stripe_checkout');
             submissionData.append('amount', admissionFee);
+            submissionData.append('paymentStatus', 'pending');
 
-            if (paymentIntentId) {
-                submissionData.append('paymentIntentId', paymentIntentId);
-            }
-
-            // Append File Fields
             Object.keys(submitFiles).forEach(key => {
                 if (submitFiles[key]) {
                     if (key === 'documentsPdf') {
@@ -195,23 +174,41 @@ const AdmissionForm = () => {
                 }
             });
 
+            // 3. Submit to backend to create record
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admissions`, {
                 method: 'POST',
-                // Note: Do NOT set Content-Type manually when sending FormData, browser sets it with boundary
                 body: submissionData
             });
             const data = await response.json();
 
             if (response.ok) {
-                setSuccessData(data);
+                // 4. Create Stripe Checkout Session
+                const paymentRes = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/create-checkout-session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: data.studentId,
+                        email: data.email,
+                        amount: admissionFee * 100 // Convert to cents
+                    })
+                });
+                const paymentData = await paymentRes.json();
+
+                if (paymentRes.ok && paymentData.url) {
+                    // 5. Redirect to Stripe Checkout
+                    window.location.href = paymentData.url;
+                } else {
+                    setError(paymentData.message || 'Failed to initialize payment gateway');
+                }
             } else {
-                setError(data.message || 'Submission failed');
+                setError(data.message || 'Registration failed');
             }
         } catch (err) {
-            console.error(err);
-            setError('Network error. Please try again later.');
+            console.error('Registration Error:', err);
+            setError(err.message || 'Network error. Please try again.');
         } finally {
             setIsSubmitting(false);
+            setIsGeneratingId(false);
         }
     };
 
@@ -292,7 +289,7 @@ const AdmissionForm = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.identificationMarks} label="Identification Marks" name="identificationMarks" />
+                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Identification Marks" name="identificationMarks" />
                                 <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.studentPhoto} label="Student Photo" name="studentPhoto" isFile acc="image/*" />
                                 <div className="md:col-span-3">
                                     <label className="block text-sm font-medium text-slate-400 mb-1">Any Medical Records</label>
@@ -396,35 +393,35 @@ const AdmissionForm = () => {
                             <h3 className="text-xl font-semibold border-b border-white/10 pb-2 mb-6 text-white text-primary-light">4. Academic & Documents</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Previous School Name" name="previousSchool" />
-                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.previousResultSheet} label="Previous Result Sheet" name="previousResultSheet" isFile acc=".pdf,image/*" />
+                                <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Previous Result Sheet" name="previousResultSheet" isFile acc=".pdf,image/*" />
                                 <div className="md:col-span-2 p-6 rounded-xl bg-primary/10 border border-primary/20">
                                     <h4 className="text-sm font-medium text-primary mb-2 flex items-center gap-2"><Upload size={16} /> Upload All Accompanying Documents</h4>
                                     <p className="text-xs text-slate-400 mb-4">Please upload Student's Birth Certificate, Father/Mother's NID, and Guardian's NID merged or as individual PDFs (Max 10 files).</p>
-                                    <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} fileValue={files.documentsPdf} label="Select PDF Files" name="documentsPdf" isFile multi acc=".pdf" />
+                                    <Input formData={formData} handleChange={handleChange} handleFileChange={handleFileChange} label="Select PDF Files" name="documentsPdf" isFile multi acc=".pdf" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Submit */}
-                        <div className="pt-6 border-t border-white/5 flex justify-between items-center">
-                            <button type="button" onClick={() => navigate('/login')} className="btn-secondary">Back to Login</button>
-                            <button type="submit" disabled={isSubmitting} className="btn-primary py-3 px-8 flex items-center gap-2 group w-full md:w-auto justify-center">
-                                Proceed to Payment
-                                <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                        <div className="pt-6 border-t border-white/5 flex justify-between items-center gap-4">
+                            <button type="button" onClick={() => navigate('/login')} className="btn-secondary whitespace-nowrap">Back to Login</button>
+                            <button type="submit" disabled={isSubmitting || isGeneratingId} className="btn-primary py-3 px-12 flex items-center gap-3 group w-full md:w-auto justify-center min-w-[240px]">
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 size={20} className="animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        Pay & Register
+                                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
                             </button>
                         </div>
                     </form>
                 </div>
 
-            <PaymentModal 
-                isOpen={isPaymentModalOpen}
-                onClose={() => setIsPaymentModalOpen(false)}
-                amount={admissionFee * 100} // Convert to cents for Stripe
-                studentId={previewStudentId}
-                studentData={{ name: `${formData.firstName} ${formData.lastName}` }}
-                type="admission"
-                onSuccess={handlePaymentSuccess}
-            />
         </div>
     );
 };

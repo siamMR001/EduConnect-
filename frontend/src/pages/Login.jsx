@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Mail, ChevronRight, School, CreditCard } from 'lucide-react';
+import { User, Lock, Mail, ChevronRight, School } from 'lucide-react';
 import PaymentModal from '../components/PaymentModal';
 
 const Login = () => {
@@ -14,8 +14,8 @@ const Login = () => {
     const [rememberMe, setRememberMe] = useState(!!savedEmail);
 
     const [isLoading, setIsLoading] = useState(false);
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [error, setError] = useState(null);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -31,19 +31,6 @@ const Login = () => {
             });
             return;
         }
-
-        // Student registration flow with Stripe
-        if (!isLoginMode && activeTab === 'student') {
-            // Basic validation before opening payment
-            if (!formData.email || !formData.password || !formData.studentId) {
-                setError('Please fill in all fields before proceeding to payment.');
-                return;
-            }
-            setIsPaymentModalOpen(true);
-            return;
-        }
-
-
 
         setIsLoading(true);
         setError(null);
@@ -62,6 +49,14 @@ const Login = () => {
             const data = await response.json();
 
             if (response.ok) {
+                // For student registration, we might need to trigger payment
+                if (!isLoginMode && activeTab === 'student') {
+                    setFormData(prev => ({ ...prev, studentId: data.studentId }));
+                    setIsPaymentModalOpen(true);
+                    setIsLoading(false);
+                    return;
+                }
+
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data));
 
@@ -78,56 +73,15 @@ const Login = () => {
         } catch (err) {
             setError('Network error. Please try again.');
         } finally {
-            setIsLoading(false);
+            if (!( !isLoginMode && activeTab === 'student' && response?.ok )) {
+                setIsLoading(false);
+            }
         }
     };
 
-    const handlePaymentSuccess = async (paymentIntentId, method) => {
+    const handlePaymentSuccess = () => {
         setIsPaymentModalOpen(false);
-        setIsLoading(true);
-        setError(null);
-
-        const payload = { 
-            ...formData, 
-            role: 'student', 
-            paymentIntentId, 
-            paymentMethod: method,
-            transactionId: method !== 'stripe' ? paymentIntentId : undefined // For Stripe, we use intent ID as txn ID for now or it's handled separately
-        };
-
-        // Note: For manual payments, PaymentModal handles the 'submit-manual' for existing records, 
-        // but for account creation, we need to pass it to register endpoint.
-
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            const data = await response.json();
-
-            if (response.ok) {
-                if (data.paymentStatus === 'pending_verification') {
-                    setError('Registration submitted. Your account will be activated once admin verifies your payment.');
-                    setIsLoading(false);
-                } else {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data));
-
-                    if (rememberMe) {
-                        localStorage.setItem('rememberedEmail', formData.email);
-                    }
-
-                    navigate('/dashboard');
-                }
-            } else {
-                setError(data.message || 'Registration failed after payment. Please contact admin.');
-                setIsLoading(false);
-            }
-        } catch (err) {
-            setError('Network error during registration. Please contact admin.');
-            setIsLoading(false);
-        }
+        navigate('/registration-success');
     };
 
     return (
@@ -255,11 +209,9 @@ const Login = () => {
                             className="w-full btn-primary flex justify-center items-center space-x-2 group mt-2"
                         >
                             <span>
-                                {isLoading ? 'Processing...' : 
-                                 (isLoginMode ? 'Sign In' : 
-                                  (activeTab === 'student' ? 'Pay & Register' : 'Create Account'))}
+                                {isLoading ? 'Processing...' : (isLoginMode ? 'Sign In' : 'Create Account')}
                             </span>
-                            {!isLoading && (activeTab === 'student' && !isLoginMode ? <CreditCard size={18} className="group-hover:scale-110 transition-transform" /> : <ChevronRight className="group-hover:translate-x-1 transition-transform" size={20} />)}
+                            {!isLoading && <ChevronRight className="group-hover:translate-x-1 transition-transform" size={20} />}
                         </button>
 
                         <div className="text-center mt-4 text-sm text-slate-400">
@@ -267,19 +219,6 @@ const Login = () => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    if (isLoginMode) {
-                                        // Switching to Register: Sync ID
-                                        setFormData(prev => ({ 
-                                            ...prev, 
-                                            name: prev.email.includes('@') ? '' : prev.email 
-                                        }));
-                                    } else {
-                                        // Switching to Login: Sync ID
-                                        setFormData(prev => ({ 
-                                            ...prev, 
-                                            email: (prev.name && activeTab === 'teacher') ? prev.name : prev.email 
-                                        }));
-                                    }
                                     setIsLoginMode(!isLoginMode);
                                     setError(null);
                                 }}
@@ -303,6 +242,7 @@ const Login = () => {
                 studentData={{ name: formData.name }}
                 type="registration"
                 onSuccess={handlePaymentSuccess}
+                amount={50000} // Example amount in cents (৳500.00)
             />
         </div>
     );

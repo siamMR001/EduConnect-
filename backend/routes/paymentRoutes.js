@@ -8,7 +8,12 @@ const {
     getPendingPayments, 
     verifyPayment,
     handleWebhook,
-    getIncomeHistory
+    getIncomeHistory,
+    createCheckoutSession,
+    verifyCheckoutSession,
+    createStudentCheckoutSession,
+    verifyStudentPayment,
+    getStudentPayments
 } = require('../controllers/paymentController');
 
 // Multer config for payment proof (receipts)
@@ -40,5 +45,14 @@ router.post('/verify', verifyPayment);
 
 // Admin: Get full income history for reporting
 router.get('/income-history', getIncomeHistory);
+
+// Stripe Checkout Session
+router.post('/create-checkout-session', createCheckoutSession);
+router.post('/verify-checkout-session', verifyCheckoutSession);
+
+// Student Profile Payments
+router.post('/student/create-checkout-session', createStudentCheckoutSession);
+router.post('/student/verify-payment', verifyStudentPayment);
+router.get('/student/:studentId', getStudentPayments);
 
 module.exports = router;
