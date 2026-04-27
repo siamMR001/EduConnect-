@@ -8,6 +8,23 @@ const Settings = require('../models/Settings');
 const AiSummaryCache = require('../models/AiSummaryCache');
 const fs = require('fs');
 const path = require('path');
+const PDFParser = require('pdf2json');
+const mammoth = require('mammoth');
+
+/**
+ * Extract plain text from a PDF buffer using pdf2json
+ */
+const extractPdfText = (buffer) => new Promise((resolve, reject) => {
+    const parser = new PDFParser(null, 1); // 1 = raw text mode
+    parser.on('pdfParser_dataReady', (data) => {
+        const text = parser.getRawTextContent();
+        resolve(text);
+    });
+    parser.on('pdfParser_dataError', (err) => {
+        reject(new Error(err.parserError || 'PDF parse error'));
+    });
+    parser.parseBuffer(buffer);
+});
 
 const logToFile = (msg, data = '') => {
     try {
@@ -179,6 +196,112 @@ exports.getAiSummary = async (req, res) => {
             error: error.message,
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
+    }
+};
+
+exports.socraticChat = async (req, res) => {
+    try {
+        const { messages } = req.body;
+        
+        const chatApiKey = process.env.GEMINI_CHAT_API_KEY;
+        if (!chatApiKey) {
+            return res.status(500).json({ message: "Gemini Chat API key missing" });
+        }
+        const genAI = new GoogleGenerativeAI(chatApiKey);
+
+        const systemInstruction = "You are an expert, encouraging tutor for EduConnect. Your goal is to help students learn, not to do the work for them. If a student asks for the answer to a homework question or assignment, you MUST refuse to give the direct answer. Instead, provide hints, break the problem down into smaller steps, and ask probing questions to help them figure it out themselves. Keep your responses concise, encouraging, and easy to understand.";
+
+        // Use the flash model
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.5-flash",
+            systemInstruction: systemInstruction 
+        });
+
+        // Convert OpenAI format messages [{role: 'user', content: '...'}] 
+        // to Gemini format [{role: 'user', parts: [{text: '...'}]}]
+        // Exclude system message if passed in the array
+        const history = messages
+            .filter(m => m.role !== 'system' && m.role !== 'assistant')
+            .slice(0, -1) // All except the very last user message
+            .map(m => ({
+                role: m.role === 'user' ? 'user' : 'model',
+                parts: [{ text: m.content }]
+            }));
+            
+        // Assistant's past messages (for context mapping)
+        const allMessages = messages.filter(m => m.role !== 'system');
+        const lastMessage = allMessages[allMessages.length - 1].content;
+
+        let geminiHistory = allMessages.slice(0, -1).map(m => ({
+             role: m.role === 'user' ? 'user' : 'model',
+             parts: [{ text: m.content }]
+        }));
+
+        // Gemini strictly requires the history to start with a 'user' role.
+        // The frontend initializes with an 'assistant' greeting, so we must drop it.
+        while (geminiHistory.length > 0 && geminiHistory[0].role === 'model') {
+            geminiHistory.shift();
+        }
+
+        const chat = model.startChat({
+            history: geminiHistory
+        });
+
+        const result = await chat.sendMessage(lastMessage);
+        const response = await result.response;
+        const text = response.text();
+
+        res.json({ reply: text });
+    } catch (error) {
+        console.error("Gemini Chat Error:", error);
+        res.status(500).json({ message: "Chat failed", error: error.message });
+    }
+};
+
+/**
+ * @desc    Extract text from uploaded PDF or DOCX file
+ * @route   POST /api/ai/extract-document
+ * @access  Private (Student)
+ */
+exports.extractDocument = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        const { mimetype, buffer, originalname } = req.file;
+        let extractedText = '';
+
+        if (mimetype === 'application/pdf') {
+            extractedText = await extractPdfText(buffer);
+        } else if (
+            mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+            mimetype === 'application/msword'
+        ) {
+            const result = await mammoth.extractRawText({ buffer });
+            extractedText = result.value;
+        } else {
+            return res.status(400).json({ message: 'Unsupported file type. Please upload a PDF or DOCX file.' });
+        }
+
+        // Trim to avoid exceeding free tier token limits (~12000 chars ~= 3000 tokens)
+        const maxChars = 12000;
+        const trimmed = extractedText.length > maxChars
+            ? extractedText.substring(0, maxChars) + '\n\n[Document truncated due to length limit...]'
+            : extractedText;
+
+        if (!trimmed.trim()) {
+            return res.status(400).json({ message: 'Could not extract readable text from this file.' });
+        }
+
+        res.json({
+            filename: originalname,
+            text: trimmed,
+            truncated: extractedText.length > maxChars
+        });
+    } catch (error) {
+        console.error('Document extraction error:', error);
+        res.status(500).json({ message: 'Failed to extract document', error: error.message });
     }
 };
 

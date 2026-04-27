@@ -47,7 +47,7 @@ import AdminExpenses from './pages/AdminExpenses';
 import AdminAnalytics from './pages/AdminAnalytics';
 import RegistrationSuccess from './pages/RegistrationSuccess';
 import StudentPayments from './pages/StudentPayments';
-
+import SocraticTutor from './components/SocraticTutor';
 
 const Sidebar = ({ user, isOpen, setIsOpen }) => {
   if (user?.role !== 'admin') return null;
@@ -319,6 +319,8 @@ function App() {
           </Routes>
         </main>
       </div>
+
+      {isLoggedIn && user?.role === 'student' && <SocraticTutor />}
 
       <footer className="w-full py-8 px-6 border-t border-white/5 bg-[#0f172a]/80 backdrop-blur-md relative z-20 no-print print:hidden">
          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
