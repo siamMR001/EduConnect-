@@ -2,7 +2,12 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
+dns.setServers(['8.8.8.8']);
 require('dotenv').config();
+
+
 
 const app = express();
 const http = require('http');
@@ -102,16 +107,20 @@ app.use('/api/feedback', require('./routes/feedbackRoutes'));
 
 // Start Cron Jobs
 const { markLateAssignments } = require('./cron/assignmentsCron');
-markLateAssignments.start();// Database Connection
+const { generateMonthlyFees } = require('./cron/paymentCron');
+markLateAssignments.start();
+generateMonthlyFees.start();
 const PORT = process.env.PORT || 5001;
 const MONGO_URI = process.env.MONGODB_URI;
+
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 mongoose.connect(MONGO_URI)
     .then(() => {
         console.log('MongoDB connection established successfully.');
-        server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     })
     .catch((err) => {
         console.error('MongoDB connection error:', err);
     });
+
 // Restart triggered

@@ -4,19 +4,21 @@ const multer = require('multer');
 const path = require('path');
 const { 
     createPaymentIntent, 
-    submitManualPayment, 
-    getPendingPayments, 
-    verifyPayment,
     handleWebhook,
     getIncomeHistory,
     createCheckoutSession,
     verifyCheckoutSession,
     createStudentCheckoutSession,
     verifyStudentPayment,
-    getStudentPayments
+    getStudentPayments,
+    createFeeConfig,
+    getFeeConfigs,
+    updateFeeConfig,
+    deleteFeeConfig,
+    getFeeConfigsByGrade
 } = require('../controllers/paymentController');
 
-// Multer config for payment proof (receipts)
+// Multer config for payment proof (receipts) - Keeping for potential other uses but removed from routes
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'uploads/');
@@ -34,14 +36,14 @@ router.post('/webhook', handleWebhook);
 // Stripe Payment Intent
 router.post('/create-payment-intent', createPaymentIntent);
 
-// Manual Payment Submission (bKash, Rocket, Nagad, Bank)
-router.post('/submit-manual', upload.single('paymentProof'), submitManualPayment);
+// Fee Configuration (Admin)
+router.post('/fee-configs', createFeeConfig);
+router.get('/fee-configs', getFeeConfigs);
+router.put('/fee-configs/:id', updateFeeConfig);
+router.delete('/fee-configs/:id', deleteFeeConfig);
 
-// Admin: Get all pending verifications
-router.get('/pending', getPendingPayments);
-
-// Admin: Approve/Reject payment
-router.post('/verify', verifyPayment);
+// Fee Configuration (Student)
+router.get('/fee-configs/student/:grade', getFeeConfigsByGrade);
 
 // Admin: Get full income history for reporting
 router.get('/income-history', getIncomeHistory);

@@ -4,17 +4,22 @@ import {
     Smartphone, Landmark, Eye, ExternalLink, 
     AlertCircle, Loader2, Filter, RefreshCcw,
     Download, Printer, Banknote, Calendar,
-    User, ArrowRight, FileText, RotateCcw
+    User, ArrowRight, FileText, RotateCcw, Trash2,
+    Plus
 } from 'lucide-react';
 
+import gradeService from '../services/gradeService';
+
 const AdminPayments = () => {
-    const [pendingPayments, setPendingPayments] = useState({ admissions: [], profiles: [] });
+    const [feeConfigs, setFeeConfigs] = useState([]);
     const [incomeHistory, setIncomeHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState('pending'); // pending, history
-    const [subTab, setSubTab] = useState('all'); // all, admission, registration
+    const [activeTab, setActiveTab] = useState('config'); // config, history
+    const [grades, setGrades] = useState([]);
+    const [feeForm, setFeeForm] = useState({ grade: '', paymentType: '', amount: '', academicYear: new Date().getFullYear().toString(), month: 'All' });
+    const [editingConfig, setEditingConfig] = useState(null);
     
     // Filters for Income Report
     const [filterMonth, setFilterMonth] = useState('');
@@ -39,23 +44,39 @@ const AdminPayments = () => {
     const availableYears = [...new Set(incomeHistory.map(p => new Date(p.date).getFullYear().toString())), new Date().getFullYear().toString()].sort((a, b) => b - a);
 
     useEffect(() => {
-        if (activeTab === 'pending') {
-            fetchPendingPayments();
+        fetchGrades();
+        if (activeTab === 'config') {
+            fetchFeeConfigs();
         } else {
             fetchIncomeHistory();
         }
     }, [activeTab]);
 
-    const fetchPendingPayments = async () => {
+    const fetchGrades = async () => {
+        try {
+            // Fetch all grades without a specific year filter to ensure all configured classes are available
+            const data = await gradeService.getAllGrades();
+            const sortedGrades = (data.gradeConfigs || []).sort((a, b) => {
+                const numA = parseInt(a.grade);
+                const numB = parseInt(b.grade);
+                return numA - numB;
+            });
+            setGrades(sortedGrades);
+        } catch (error) {
+            console.error("Error fetching grades:", error);
+        }
+    };
+
+    const fetchFeeConfigs = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/pending`);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/fee-configs`);
             const data = await res.json();
             if (res.ok) {
-                setPendingPayments(data);
+                setFeeConfigs(data);
             }
         } catch (error) {
-            console.error("Error fetching payments:", error);
+            console.error("Error fetching fee configs:", error);
         } finally {
             setLoading(false);
         }
@@ -77,21 +98,55 @@ const AdminPayments = () => {
         }
     };
 
-    const handleVerify = async (id, type, status) => {
-        setProcessingId(id);
+    const handleSaveFeeConfig = async (e) => {
+        e.preventDefault();
+        setLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/verify`, {
-                method: 'POST',
+            const url = editingConfig 
+                ? `${import.meta.env.VITE_API_URL}/api/payments/fee-configs/${editingConfig._id}`
+                : `${import.meta.env.VITE_API_URL}/api/payments/fee-configs`;
+            
+            const res = await fetch(url, {
+                method: editingConfig ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, type, status })
+                body: JSON.stringify(feeForm)
             });
+
             if (res.ok) {
-                fetchPendingPayments();
+                fetchFeeConfigs();
+                setFeeForm({ grade: '', paymentType: '', amount: '', academicYear: new Date().getFullYear().toString(), month: 'All' });
+                setEditingConfig(null);
+            } else {
+                const error = await res.json();
+                alert(error.message || "Failed to save configuration");
             }
         } catch (error) {
-            console.error("Error verifying payment:", error);
+            console.error("Error saving fee config:", error);
         } finally {
-            setProcessingId(null);
+            setLoading(false);
+        }
+    };
+
+    const handleEditConfig = (config) => {
+        setEditingConfig(config);
+        setFeeForm({
+            grade: config.grade,
+            paymentType: config.paymentType,
+            amount: config.amount,
+            academicYear: config.academicYear,
+            month: config.month
+        });
+    };
+
+    const handleDeleteConfig = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this configuration?")) return;
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/fee-configs/${id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) fetchFeeConfigs();
+        } catch (error) {
+            console.error("Error deleting fee config:", error);
         }
     };
 
@@ -391,20 +446,10 @@ const AdminPayments = () => {
         setFilterYear(new Date().getFullYear().toString());
     };
 
-    const allPending = [
-        ...pendingPayments.admissions.map(p => ({ ...p, type: 'admission' })),
-        ...pendingPayments.profiles.map(p => ({ ...p, type: 'registration' }))
-    ];
-
-    const filteredPending = allPending.filter(p => {
-        const matchesSearch = 
-            p.studentId?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            (p.firstName + ' ' + p.lastName).toLowerCase().includes(searchTerm.toLowerCase());
-        
-        if (subTab === 'admission') return matchesSearch && p.type === 'admission';
-        if (subTab === 'registration') return matchesSearch && p.type === 'registration';
-        return matchesSearch;
-    });
+    const filteredFeeConfigs = feeConfigs.filter(c => 
+        c.grade.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        c.paymentType.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const filteredHistory = incomeHistory.filter(p => {
         const paymentDate = new Date(p.date);
@@ -418,7 +463,7 @@ const AdminPayments = () => {
         return matchesSearch && matchesMonth && matchesYear;
     });
 
-    const totalIncome = filteredHistory.reduce((sum, p) => sum + p.amount, 0);
+    const totalIncome = filteredHistory.reduce((sum, p) => sum + (p.amount || 0), 0);
 
     return (
         <div className="space-y-8 animate-fade-in relative">
@@ -432,7 +477,7 @@ const AdminPayments = () => {
                     <p className="text-slate-400 mt-1">Track income, verify payments, and generate financial reports</p>
                 </div>
                 <div className="flex gap-3">
-                    <button onClick={activeTab === 'pending' ? fetchPendingPayments : fetchIncomeHistory} className="btn-secondary flex items-center gap-2">
+                    <button onClick={activeTab === 'config' ? fetchFeeConfigs : fetchIncomeHistory} className="btn-secondary flex items-center gap-2">
                         <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
                         Refresh
                     </button>
@@ -448,16 +493,11 @@ const AdminPayments = () => {
             {/* Main Tabs */}
             <div className="flex border-b border-white/5 no-print">
                 <button 
-                    onClick={() => setActiveTab('pending')}
-                    className={`px-8 py-4 text-sm font-black uppercase tracking-widest transition-all relative ${activeTab === 'pending' ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
+                    onClick={() => setActiveTab('config')}
+                    className={`px-8 py-4 text-sm font-black uppercase tracking-widest transition-all relative ${activeTab === 'config' ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
                 >
-                    Pending Verifications
-                    {allPending.length > 0 && (
-                        <span className="absolute top-3 right-2 w-5 h-5 bg-primary text-white text-[10px] flex items-center justify-center rounded-full border-2 border-background animate-pulse font-black">
-                            {allPending.length}
-                        </span>
-                    )}
-                    {activeTab === 'pending' && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full shadow-[0_-4px_12px_rgba(59,130,246,0.5)]"></div>}
+                    Fee Configuration
+                    {activeTab === 'config' && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full shadow-[0_-4px_12px_rgba(59,130,246,0.5)]"></div>}
                 </button>
                 <button 
                     onClick={() => setActiveTab('history')}
@@ -470,19 +510,19 @@ const AdminPayments = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 no-print">
-                {activeTab === 'pending' ? (
+                {activeTab === 'config' ? (
                     <>
-                        <KPICard label="Total Pending" value={allPending.length} icon={Clock} color="text-primary" />
-                        <KPICard label="Admissions" value={pendingPayments.admissions.length} icon={Landmark} color="text-blue-400" />
-                        <KPICard label="Registrations" value={pendingPayments.profiles.length} icon={Smartphone} color="text-indigo-400" />
-                        <KPICard label="Status" value="Action Required" icon={AlertCircle} color="text-orange-400" />
+                        <KPICard label="Total Configs" value={feeConfigs.length} icon={FileText} color="text-primary" />
+                        <KPICard label="Classes" value={[...new Set(feeConfigs.map(c => c.grade))].length} icon={Landmark} color="text-blue-400" />
+                        <KPICard label="Academic Year" value={new Date().getFullYear()} icon={Calendar} color="text-indigo-400" />
+                        <KPICard label="System Status" value="Active" icon={CheckCircle} color="text-emerald-400" />
                     </>
                 ) : (
                     <>
                         <KPICard label="Transactions" value={filteredHistory.length} icon={FileText} color="text-primary" />
-                        <KPICard label="Admission Revenue" value={`৳${filteredHistory.filter(p => p.type === 'Admission Fee').reduce((s, p) => s + p.amount, 0).toLocaleString()}`} icon={Landmark} color="text-emerald-400" />
-                        <KPICard label="Registration Revenue" value={`৳${filteredHistory.filter(p => p.type === 'Registration Fee').reduce((s, p) => s + p.amount, 0).toLocaleString()}`} icon={Smartphone} color="text-blue-400" />
-                        <KPICard label="Net Income" value={`৳${totalIncome.toLocaleString()}`} icon={Banknote} color="text-green-500" />
+                        <KPICard label="Admission Revenue" value={`$${filteredHistory.filter(p => p.type === 'Admission Fee').reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}`} icon={Landmark} color="text-emerald-400" />
+                        <KPICard label="Registration Revenue" value={`$${filteredHistory.filter(p => p.type === 'Registration Fee').reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}`} icon={Smartphone} color="text-blue-400" />
+                        <KPICard label="Net Income" value={`$${totalIncome.toLocaleString()}`} icon={Banknote} color="text-green-500" />
                     </>
                 )}
             </div>
@@ -490,12 +530,8 @@ const AdminPayments = () => {
             {/* Search and Filters */}
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-black/20 p-4 rounded-3xl border border-white/5 no-print">
                 <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-2xl">
-                    {activeTab === 'pending' ? (
-                        ['all', 'admission', 'registration'].map(tab => (
-                            <button key={tab} onClick={() => setSubTab(tab)} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${subTab === tab ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}>
-                                {tab}
-                            </button>
-                        ))
+                    {activeTab === 'config' ? (
+                        <p className="px-6 py-2 text-[10px] font-black uppercase tracking-widest text-primary">Fee Configuration Manager</p>
                     ) : (
                         <>
                             <select
@@ -523,7 +559,7 @@ const AdminPayments = () => {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
                         <input 
                             type="text" 
-                            placeholder={activeTab === 'pending' ? "Search ID or Name..." : "Search Name, ID or TxID..."}
+                            placeholder={activeTab === 'config' ? "Search Class or Type..." : "Search Name, ID or TxID..."}
                             value={searchTerm} 
                             onChange={(e) => setSearchTerm(e.target.value)} 
                             className="input-field pl-12 h-12 rounded-2xl text-xs" 
@@ -541,133 +577,234 @@ const AdminPayments = () => {
                 </div>
             </div>
 
-            {/* Content Table */}
-            <div className="glass-panel border-white/5 overflow-hidden no-print">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-white/5 bg-white/5">
-                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">
-                                    {activeTab === 'pending' ? 'Student / ID' : 'Income Source'}
-                                </th>
-                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Type</th>
-                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Method</th>
-                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Transaction / Date</th>
-                                <th className="px-6 py-5 text-right text-xs font-black text-slate-400 uppercase tracking-widest">
-                                    {activeTab === 'pending' ? 'Actions' : 'Status'}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-20 text-center">
-                                        <Loader2 size={40} className="animate-spin mx-auto text-primary mb-4" />
-                                        <p className="text-slate-400 animate-pulse font-bold">Synchronizing financial records...</p>
-                                    </td>
+            {activeTab === 'config' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 no-print">
+                    {/* Fee Form */}
+                    <div className="glass-panel p-8 h-fit">
+                        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Plus size={20} className="text-primary" />
+                            {editingConfig ? 'Edit Configuration' : 'Add New Fee Config'}
+                        </h3>
+                        <form onSubmit={handleSaveFeeConfig} className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Class/Grade</label>
+                                <select 
+                                    required
+                                    className="input-field h-12 rounded-xl"
+                                    value={feeForm.grade}
+                                    onChange={e => setFeeForm({...feeForm, grade: e.target.value})}
+                                >
+                                    <option value="">Select Class</option>
+                                    {grades.map(g => (
+                                        <option key={g._id} value={g.grade}>
+                                            Class {parseInt(g.grade)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Payment Type</label>
+                                <select 
+                                    required
+                                    className="input-field h-12 rounded-xl"
+                                    value={feeForm.paymentType}
+                                    onChange={e => setFeeForm({...feeForm, paymentType: e.target.value})}
+                                >
+                                    <option value="">Select Type</option>
+                                    {['Tuition Fee', 'Library Fee', 'Transportation Fee', 'Exam Fee', 'Sports Fee', 'Other'].map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Year</label>
+                                    <input 
+                                        required
+                                        className="input-field h-12 rounded-xl"
+                                        value={feeForm.academicYear}
+                                        onChange={e => setFeeForm({...feeForm, academicYear: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Month</label>
+                                    <select 
+                                        required
+                                        className="input-field h-12 rounded-xl"
+                                        value={feeForm.month}
+                                        onChange={e => setFeeForm({...feeForm, month: e.target.value})}
+                                    >
+                                        <option value="All">All Months</option>
+                                        {months.slice(1).map(m => <option key={m.label} value={m.label}>{m.label}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 block">Amount (USD)</label>
+                                <input 
+                                    type="number"
+                                    required
+                                    placeholder="0.00"
+                                    className="input-field h-12 rounded-xl"
+                                    value={feeForm.amount}
+                                    onChange={e => setFeeForm({...feeForm, amount: e.target.value})}
+                                />
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button type="submit" className="flex-1 btn-primary py-3 rounded-xl font-bold uppercase tracking-widest text-[10px]">
+                                    {editingConfig ? 'Update Config' : 'Save Config'}
+                                </button>
+                                {editingConfig && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            setEditingConfig(null);
+                                            setFeeForm({ grade: '', paymentType: '', amount: '', academicYear: new Date().getFullYear().toString(), month: 'All' });
+                                        }}
+                                        className="px-4 py-3 bg-white/5 text-slate-400 rounded-xl hover:bg-white/10"
+                                    >
+                                        <XCircle size={18} />
+                                    </button>
+                                )}
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Config Table */}
+                    <div className="lg:col-span-2 glass-panel border-white/5 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-white/5 bg-white/5">
+                                        <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Class</th>
+                                        <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Type</th>
+                                        <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                        <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Period</th>
+                                        <th className="px-6 py-5 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr><td colSpan="5" className="px-6 py-20 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></td></tr>
+                                    ) : filteredFeeConfigs.length === 0 ? (
+                                        <tr><td colSpan="5" className="px-6 py-20 text-center text-slate-500">No configurations found.</td></tr>
+                                    ) : filteredFeeConfigs.map(config => (
+                                        <tr key={config._id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                            <td className="px-6 py-4 font-black text-white">Class {config.grade}</td>
+                                            <td className="px-6 py-4">
+                                                <span className="px-2 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-lg uppercase">{config.paymentType}</span>
+                                            </td>
+                                            <td className="px-6 py-4 font-mono font-bold text-emerald-400">${config.amount}</td>
+                                            <td className="px-6 py-4 text-xs text-slate-400">{config.month} {config.academicYear}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button onClick={() => handleEditConfig(config)} className="p-2 bg-white/5 text-slate-400 hover:text-white rounded-lg transition-colors"><FileText size={16} /></button>
+                                                    <button onClick={() => handleDeleteConfig(config._id)} className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Income History Table (Only show when activeTab is history) */}
+            {activeTab === 'history' && (
+                <div className="glass-panel border-white/5 overflow-hidden no-print">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-white/5 bg-white/5">
+                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Student / ID</th>
+                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Type</th>
+                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Method</th>
+                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Transaction / Date</th>
+                                    <th className="px-6 py-5 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                                 </tr>
-                            ) : (activeTab === 'pending' ? filteredPending : filteredHistory).length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-20 text-center">
-                                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
-                                            {activeTab === 'pending' ? <CheckCircle size={40} className="text-primary" /> : <Search size={40} className="text-primary" />}
-                                        </div>
-                                        <h3 className="text-xl font-black text-white">No Records Found</h3>
-                                        <p className="text-slate-400 mt-1">Try adjusting your filters or search terms.</p>
-                                    </td>
-                                </tr>
-                            ) : (activeTab === 'pending' ? filteredPending : filteredHistory).map((p) => (
-                                <tr key={p._id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-white font-black group-hover:border-primary/50 transition-all">
-                                                {(p.firstName || p.studentName)?.[0]}
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-20 text-center">
+                                            <Loader2 size={40} className="animate-spin mx-auto text-primary mb-4" />
+                                            <p className="text-slate-400 animate-pulse font-bold">Synchronizing financial records...</p>
+                                        </td>
+                                    </tr>
+                                ) : filteredHistory.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-20 text-center">
+                                            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
+                                                <Search size={40} className="text-primary" />
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-black text-white group-hover:text-primary transition-colors">
-                                                    {p.studentName || `${p.firstName} ${p.lastName}`}
-                                                </p>
-                                                <p className="text-[10px] text-slate-500 font-black tracking-widest mt-0.5 uppercase">ID: {p.studentId}</p>
+                                            <h3 className="text-xl font-black text-white">No Records Found</h3>
+                                            <p className="text-slate-400 mt-1">Try adjusting your filters or search terms.</p>
+                                        </td>
+                                    </tr>
+                                ) : filteredHistory.map((p) => (
+                                    <tr key={p._id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-white font-black group-hover:border-primary/50 transition-all">
+                                                    {p.studentName?.[0]}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-white group-hover:text-primary transition-colors">
+                                                        {p.studentName}
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-500 font-black tracking-widest mt-0.5 uppercase">ID: {p.studentId}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                            (p.type || p.category) === 'admission' || p.type === 'Admission Fee' 
-                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
-                                            : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-                                        }`}>
-                                            {p.type}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            {p.paymentMethod === 'bank_transfer' ? <Landmark size={14} className="text-slate-500" /> : <Smartphone size={14} className="text-slate-500" />}
-                                            <span className="text-[10px] font-black text-white uppercase tracking-wider">{p.paymentMethod || p.method}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm font-black text-emerald-400 font-mono">৳{(p.amount || 0).toLocaleString()}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {activeTab === 'pending' ? (
-                                            p.paymentMethod === 'bank_transfer' ? (
-                                                <a href={`${import.meta.env.VITE_API_URL}${p.paymentProof}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[10px] font-black uppercase text-primary hover:underline">
-                                                    <Eye size={14} /> View Receipt
-                                                </a>
-                                            ) : (
-                                                <p className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-1 rounded inline-block">{p.transactionId}</p>
-                                            )
-                                        ) : (
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                                p.type === 'Admission Fee' 
+                                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                                                : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                                            }`}>
+                                                {p.type}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                {p.method === 'bank_transfer' ? <Landmark size={14} className="text-slate-500" /> : <Smartphone size={14} className="text-slate-500" />}
+                                                <span className="text-[10px] font-black text-white uppercase tracking-wider">{p.method}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-sm font-black text-emerald-400 font-mono">${(p.amount || 0).toLocaleString()}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <div>
                                                 <p className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">{p.transactionId}</p>
                                                 <p className="text-[9px] text-slate-500 font-bold mt-0.5 uppercase tracking-tighter">
                                                     {new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {activeTab === 'pending' ? (
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button 
-                                                    onClick={() => handleVerify(p._id, p.type, 'paid')}
-                                                    disabled={processingId === p._id}
-                                                    className="p-2.5 bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500 hover:text-white transition-all shadow-lg hover:shadow-green-500/20"
-                                                    title="Approve Payment"
-                                                >
-                                                    {processingId === p._id ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleVerify(p._id, p.type, 'failed')}
-                                                    disabled={processingId === p._id}
-                                                    className="p-2.5 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20"
-                                                    title="Reject Payment"
-                                                >
-                                                    <XCircle size={18} />
-                                                </button>
-                                            </div>
-                                        ) : (
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1.5 text-emerald-400 text-[10px] font-black uppercase">
                                                 <CheckCircle size={14} /> Paid
                                             </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        {activeTab === 'history' && filteredHistory.length > 0 && (
-                            <tfoot>
-                                <tr className="bg-white/5 border-t-2 border-white/10">
-                                    <td colSpan="3" className="px-6 py-6 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Grand Total ({filterMonth ? months.find(m => m.value === filterMonth).label : 'Selected Period'}):</td>
-                                    <td colSpan="3" className="px-6 py-6 text-2xl font-black text-emerald-400 font-mono">৳{totalIncome.toLocaleString()}</td>
-                                </tr>
-                            </tfoot>
-                        )}
-                    </table>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            {filteredHistory.length > 0 && (
+                                <tfoot>
+                                    <tr className="bg-white/5 border-t-2 border-white/10">
+                                        <td colSpan="3" className="px-6 py-6 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Grand Total ({filterMonth ? months.find(m => m.value === filterMonth).label : 'Selected Period'}):</td>
+                                        <td colSpan="3" className="px-6 py-6 text-2xl font-black text-emerald-400 font-mono">${totalIncome.toLocaleString()}</td>
+                                    </tr>
+                                </tfoot>
+                            )}
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Print Section (Hidden by default) */}
             <div className="hidden print:block fixed inset-0 bg-white text-black p-12 z-[9999]">
@@ -702,7 +839,7 @@ const AdminPayments = () => {
                     </div>
                     <div className="bg-black text-white p-6 rounded-2xl flex flex-col justify-center items-center shadow-xl">
                         <h3 className="text-xs font-black uppercase mb-2 opacity-50 tracking-widest">Total Verified Revenue</h3>
-                        <div className="text-5xl font-black font-mono">৳{totalIncome.toLocaleString()}</div>
+                        <div className="text-5xl font-black font-mono">${totalIncome.toLocaleString()}</div>
                     </div>
                 </div>
 
@@ -728,14 +865,14 @@ const AdminPayments = () => {
                                 <td className="p-4 text-[10px] font-black uppercase tracking-tighter">{p.type}</td>
                                 <td className="p-4 text-[10px] font-black uppercase">{p.method}</td>
                                 <td className="p-4 text-[10px] font-mono font-bold text-gray-600">{p.transactionId}</td>
-                                <td className="p-4 text-sm font-black text-right font-mono">৳{p.amount.toLocaleString()}</td>
+                                <td className="p-4 text-sm font-black text-right font-mono">${(p.amount || 0).toLocaleString()}</td>
                             </tr>
                         ))}
                     </tbody>
                     <tfoot>
                         <tr className="bg-black text-white font-black">
                             <td colSpan="5" className="p-6 text-right uppercase tracking-[0.3em] text-xs">Total Net Revenue for the Period:</td>
-                            <td className="p-6 text-2xl text-right font-mono italic">৳{totalIncome.toLocaleString()}</td>
+                            <td className="p-6 text-2xl text-right font-mono italic">${totalIncome.toLocaleString()}</td>
                         </tr>
                     </tfoot>
                 </table>

@@ -2,6 +2,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Admission = require('../models/Admission');
 const StudentProfile = require('../models/StudentProfile');
 const Payment = require('../models/Payment');
+const FeeConfig = require('../models/FeeConfig');
 const sendEmail = require('../utils/emailService');
 const { getPaymentSuccessEmail } = require('../utils/emailTemplates');
 
@@ -181,87 +182,70 @@ exports.verifyCheckoutSession = async (req, res) => {
     }
 };
 
-exports.submitManualPayment = async (req, res) => {
+// --- FEE CONFIGURATION FUNCTIONS ---
+
+exports.createFeeConfig = async (req, res) => {
     try {
-        const { studentId, paymentMethod, transactionId, type, amount } = req.body;
-        let paymentProof = '';
-
-        if (req.file) {
-            paymentProof = `/uploads/${req.file.filename}`;
-        }
-
-        let record;
-        if (type === 'admission') {
-            record = await Admission.findOne({ studentId });
-        } else {
-            record = await StudentProfile.findOne({ studentId });
-        }
-
-        if (!record) {
-            return res.status(404).json({ message: 'Registration record not found' });
-        }
-
-        record.paymentMethod = paymentMethod;
-        record.transactionId = transactionId;
-        if (paymentProof) record.paymentProof = paymentProof;
+        const { grade, paymentType, amount, academicYear, month } = req.body;
         
-        if (type === 'admission') {
-            record.paymentStatus = 'pending_verification';
-            record.amount = parseFloat(amount) || 0;
-        } else {
-            record.registrationPaymentStatus = 'pending_verification';
-            record.admissionAmount = parseFloat(amount) || 0;
+        // Check if config already exists for this combination
+        const existing = await FeeConfig.findOne({ grade, paymentType, academicYear, month });
+        if (existing) {
+            return res.status(400).json({ message: 'Fee configuration already exists for this combination.' });
         }
 
-        await record.save();
-
-        res.status(200).json({ 
-            message: 'Payment details submitted and pending verification.',
-            status: 'pending_verification'
+        const feeConfig = await FeeConfig.create({
+            grade,
+            paymentType,
+            amount,
+            academicYear,
+            month
         });
+
+        res.status(201).json(feeConfig);
     } catch (error) {
-        console.error('Manual payment submission error:', error);
-        res.status(500).json({ message: 'Error submitting payment details', error: error.message });
+        res.status(500).json({ message: 'Error creating fee configuration', error: error.message });
     }
 };
 
-exports.getPendingPayments = async (req, res) => {
+exports.getFeeConfigs = async (req, res) => {
     try {
-        const pendingAdmissions = await Admission.find({ paymentStatus: 'pending_verification' });
-        const pendingProfiles = await StudentProfile.find({ registrationPaymentStatus: 'pending_verification' });
-
-        res.status(200).json({
-            admissions: pendingAdmissions,
-            profiles: pendingProfiles
-        });
+        const configs = await FeeConfig.find().sort({ createdAt: -1 });
+        res.status(200).json(configs);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching pending payments' });
+        res.status(500).json({ message: 'Error fetching fee configurations' });
     }
 };
 
-exports.verifyPayment = async (req, res) => {
+exports.updateFeeConfig = async (req, res) => {
     try {
-        const { id, type, status } = req.body;
-        let record;
-        
-        if (type === 'admission') {
-            record = await Admission.findById(id);
-        } else {
-            record = await StudentProfile.findById(id);
-        }
-
-        if (!record) return res.status(404).json({ message: 'Record not found' });
-
-        if (type === 'admission') {
-            record.paymentStatus = status;
-        } else {
-            record.registrationPaymentStatus = status;
-        }
-
-        await record.save();
-        res.status(200).json({ message: `Payment ${status} successfully.` });
+        const { id } = req.params;
+        const updateData = req.body;
+        const config = await FeeConfig.findByIdAndUpdate(id, updateData, { new: true });
+        if (!config) return res.status(404).json({ message: 'Fee configuration not found' });
+        res.status(200).json(config);
     } catch (error) {
-        res.status(500).json({ message: 'Error verifying payment' });
+        res.status(500).json({ message: 'Error updating fee configuration' });
+    }
+};
+
+exports.deleteFeeConfig = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await FeeConfig.findByIdAndDelete(id);
+        res.status(200).json({ message: 'Fee configuration deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting fee configuration' });
+    }
+};
+
+exports.getFeeConfigsByGrade = async (req, res) => {
+    try {
+        const { grade } = req.params;
+        const configs = await FeeConfig.find({ grade });
+        res.status(200).json(configs);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching fee configurations for grade' });
     }
 };
 
@@ -269,7 +253,7 @@ exports.getIncomeHistory = async (req, res) => {
     try {
         console.log('--- Fetching Unified Income History ---');
         
-        // 1. Fetch from Admission collection
+        // 1. Fetch from Admission collection (Paid/Approved)
         const admissions = await Admission.find({
             $or: [
                 { paymentStatus: 'paid' },
@@ -284,9 +268,9 @@ exports.getIncomeHistory = async (req, res) => {
             studentId: a.studentId || 'N/A',
             amount: a.admissionFee || a.amount || 0,
             type: 'Admission Fee',
-            method: a.paymentMethod || 'Manual',
+            method: a.paymentMethod || 'Stripe',
             date: a.createdAt,
-            transactionId: a.transactionId || 'N/A'
+            transactionId: a.transactionId || a.stripeSessionId || 'N/A'
         }));
 
         // 2. Fetch from StudentProfile collection (Registration Fees)
@@ -300,26 +284,21 @@ exports.getIncomeHistory = async (req, res) => {
             studentId: p.studentId || 'N/A',
             amount: p.admissionAmount || 0,
             type: 'Registration Fee',
-            method: p.paymentMethod || 'Manual',
+            method: p.paymentMethod || 'Stripe',
             date: p.createdAt,
-            transactionId: p.transactionId || 'N/A'
+            transactionId: p.transactionId || p.stripeSessionId || 'N/A'
         }));
 
-        // 3. Fetch from new Payment collection
+        // 3. Fetch from new Payment collection (Monthly Fees)
         const payments = await Payment.find({ status: 'Paid' }).sort({ paidAt: -1 });
-
-        console.log(`Found ${admissions.length} admissions and ${payments.length} general payments.`);
 
         const generalHistory = await Promise.all(payments.map(async (p) => {
             let sName = 'Student';
             let sId = p.studentId || 'N/A';
             
-            // Manual lookup using the custom string ID (e.g., "26110002")
-            // Check both StudentProfile and Admission for the name
+            // Manual lookup using the custom string ID
             let profile = await StudentProfile.findOne({ studentId: p.studentId });
-            
             if (!profile) {
-                // Try Admission if not in Profile
                 profile = await Admission.findOne({ studentId: p.studentId });
             }
 
@@ -334,7 +313,7 @@ exports.getIncomeHistory = async (req, res) => {
                 studentId: sId,
                 amount: p.amount || 0,
                 type: p.paymentType || 'General Payment',
-                method: p.paymentMethod || 'Stripe/Online',
+                method: p.paymentMethod || 'Stripe',
                 date: p.paidAt || p.createdAt,
                 transactionId: p.stripeSessionId || 'N/A'
             };
@@ -414,43 +393,47 @@ exports.verifyStudentPayment = async (req, res) => {
             return res.status(200).json({ success: true, message: 'Already processed' });
         }
 
-        let sessionMetadata;
-        let paymentIntentId = 'mock_intent_id';
+        let studentId, paymentType, month, year, amount, paymentIntentId;
 
-        // --- DEVELOPMENT MODE BYPASS ---
         if (sessionId.startsWith('mock_session_')) {
             console.log('--- DEV MODE: Verifying Mock Session ---');
-            sessionMetadata = {
-                studentId: req.user._id,
-                paymentType: 'Monthly Fee',
-                month: new Date().toLocaleString('default', { month: 'long' }),
-                year: new Date().getFullYear().toString(),
-                amount: 500
-            };
-        } else {
-            const session = await stripe.checkout.sessions.retrieve(sessionId);
-            if (session.payment_status !== 'paid') {
-                return res.status(400).json({ success: false, message: 'Payment not paid' });
-            }
-            sessionMetadata = session.metadata;
-            paymentIntentId = session.payment_intent;
+            // For mock sessions, we'd typically need the metadata from the request or stashed somewhere
+            // But since this is a mock bypass, we'll try to find it or use defaults
+            // In a real mock scenario, we might pass metadata in the verify call too
+            return res.status(200).json({ success: true, message: 'Mock payment verified' });
         }
 
-        const { studentId, paymentType, month, year, amount } = sessionMetadata;
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-        const payment = await Payment.create({
-            studentId,
-            paymentType,
-            month,
-            year,
-            amount: parseFloat(amount),
-            status: 'Paid',
-            stripeSessionId: sessionId,
-            stripePaymentIntentId: paymentIntentId,
-            paidAt: new Date()
-        });
+        if (session.payment_status === 'paid') {
+            ({ studentId, paymentType, month, year, amount } = session.metadata);
+            paymentIntentId = session.payment_intent;
 
-        res.status(200).json({ success: true, payment });
+            // Use upsert to handle both cron-generated dues and on-the-fly virtual dues
+            const payment = await Payment.findOneAndUpdate(
+                { 
+                    studentId, 
+                    paymentType, 
+                    month, 
+                    year 
+                },
+                {
+                    status: 'Paid',
+                    stripeSessionId: sessionId,
+                    stripePaymentIntentId: paymentIntentId,
+                    paidAt: new Date(),
+                    amount: parseFloat(amount)
+                },
+                { 
+                    upsert: true, 
+                    new: true 
+                }
+            );
+
+            res.status(200).json({ success: true, payment });
+        } else {
+            res.status(400).json({ success: false, message: 'Payment not paid' });
+        }
     } catch (error) {
         console.error('Verify Student Payment Error:', error);
         res.status(500).json({ message: 'Error verifying payment', error: error.message });
@@ -460,9 +443,60 @@ exports.verifyStudentPayment = async (req, res) => {
 exports.getStudentPayments = async (req, res) => {
     try {
         const { studentId } = req.params;
-        const payments = await Payment.find({ studentId }).sort({ createdAt: -1 });
-        res.status(200).json(payments);
+        
+        // 1. Get student profile to find their class
+        const profile = await StudentProfile.findOne({ studentId });
+        if (!profile) {
+            return res.status(404).json({ message: 'Student profile not found' });
+        }
+
+        const studentClass = profile.currentClass;
+        if (!studentClass) {
+            return res.status(200).json(await Payment.find({ studentId }).sort({ createdAt: -1 })); // Return whatever history exists
+        }
+
+        // Handle variations like "7" vs "07"
+        const normalizedClass = studentClass.toString().replace(/^0+/, '');
+        const paddedClass = normalizedClass.padStart(2, '0');
+        const searchGrades = [studentClass, normalizedClass, paddedClass];
+
+        // 2. Fetch all configured fees for this class
+        const feeConfigs = await FeeConfig.find({ grade: { $in: searchGrades } });
+
+        // 3. Fetch existing payment records (Paid or generated Due)
+        const existingPayments = await Payment.find({ studentId }).sort({ createdAt: -1 });
+
+        // 4. Merge: For each FeeConfig, check if a payment record already exists
+        const virtualDues = [];
+        for (const config of feeConfigs) {
+            const hasPayment = existingPayments.find(p => 
+                p.paymentType === config.paymentType && 
+                p.month === config.month && 
+                p.year === config.academicYear
+            );
+
+            if (!hasPayment) {
+                // Create a "virtual" due payment based on the admin config
+                virtualDues.push({
+                    _id: `temp_${config._id}`,
+                    studentId: studentId,
+                    paymentType: config.paymentType,
+                    month: config.month,
+                    year: config.academicYear,
+                    amount: config.amount,
+                    status: 'Due',
+                    isVirtual: true,
+                    createdAt: config.createdAt
+                });
+            }
+        }
+
+        // Return combined list (Real payments + Virtual dues)
+        const combined = [...existingPayments, ...virtualDues].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        res.status(200).json(combined);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching payment history' });
+        console.error('Error fetching student payments:', error);
+        res.status(500).json({ message: 'Error fetching payments' });
     }
 };

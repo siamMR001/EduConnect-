@@ -57,7 +57,14 @@ exports.getAllGradeConfigurations = async (req, res) => {
         let filter = {};
         if (academicYear) filter.academicYear = academicYear;
 
-        const gradeConfigs = await GradeSection.find(filter).sort({ grade: 1 });
+        const gradeConfigs = await GradeSection.find(filter);
+        
+        // Sort numerically (Class 1, 2... 10, 11...)
+        gradeConfigs.sort((a, b) => {
+            const numA = parseInt(a.grade);
+            const numB = parseInt(b.grade);
+            return numA - numB;
+        });
 
         res.status(200).json({
             total: gradeConfigs.length,
