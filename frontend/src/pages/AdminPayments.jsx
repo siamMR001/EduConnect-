@@ -24,6 +24,7 @@ const AdminPayments = () => {
     // Filters for Income Report
     const [filterMonth, setFilterMonth] = useState('');
     const [filterYear, setFilterYear] = useState('');
+    const [filterType, setFilterType] = useState(''); // All, Admission Fee, Registration Fee, Monthly Fee
 
     const months = [
         { value: '', label: 'All Months' },
@@ -443,6 +444,7 @@ const AdminPayments = () => {
     const resetFilters = () => {
         setSearchTerm('');
         setFilterMonth('');
+        setFilterType('');
         setFilterYear(new Date().getFullYear().toString());
     };
 
@@ -459,8 +461,9 @@ const AdminPayments = () => {
         
         const matchesMonth = filterMonth === '' || paymentDate.getMonth().toString() === filterMonth;
         const matchesYear = filterYear === '' || paymentDate.getFullYear().toString() === filterYear;
+        const matchesType = filterType === '' || p.type === filterType;
 
-        return matchesSearch && matchesMonth && matchesYear;
+        return matchesSearch && matchesMonth && matchesYear && matchesType;
     });
 
     const totalIncome = filteredHistory.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -534,6 +537,17 @@ const AdminPayments = () => {
                         <p className="px-6 py-2 text-[10px] font-black uppercase tracking-widest text-primary">Fee Configuration Manager</p>
                     ) : (
                         <>
+                            <select
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
+                                className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-400 focus:ring-0 cursor-pointer hover:text-white px-4"
+                            >
+                                <option value="" className="bg-slate-900 text-white">All Categories</option>
+                                <option value="Admission Fee" className="bg-slate-900 text-white">Admission Fees</option>
+                                <option value="Registration Fee" className="bg-slate-900 text-white">Registration Fees</option>
+                                <option value="Monthly Fee" className="bg-slate-900 text-white">Monthly Fees</option>
+                            </select>
+                            <div className="w-px h-6 bg-white/10 self-center"></div>
                             <select
                                 value={filterMonth}
                                 onChange={(e) => setFilterMonth(e.target.value)}

@@ -284,7 +284,7 @@ exports.getIncomeHistory = async (req, res) => {
             studentId: p.studentId || 'N/A',
             amount: p.admissionAmount || 0,
             type: 'Registration Fee',
-            method: p.paymentMethod || 'Stripe',
+            method: p.paymentMethod || 'Manual', // Restore 'Manual' as fallback for legacy
             date: p.createdAt,
             transactionId: p.transactionId || p.stripeSessionId || 'N/A'
         }));
@@ -397,10 +397,23 @@ exports.verifyStudentPayment = async (req, res) => {
 
         if (sessionId.startsWith('mock_session_')) {
             console.log('--- DEV MODE: Verifying Mock Session ---');
-            // For mock sessions, we'd typically need the metadata from the request or stashed somewhere
-            // But since this is a mock bypass, we'll try to find it or use defaults
-            // In a real mock scenario, we might pass metadata in the verify call too
-            return res.status(200).json({ success: true, message: 'Mock payment verified' });
+            // For mock sessions, create a real record so the UI updates
+            const mockPayment = await Payment.findOneAndUpdate(
+                { 
+                    studentId: "DEV_TEST", 
+                    paymentType: "Monthly Fee", 
+                    month: new Date().toLocaleString('default', { month: 'long' }), 
+                    year: new Date().getFullYear().toString() 
+                },
+                {
+                    status: 'Paid',
+                    stripeSessionId: sessionId,
+                    paidAt: new Date(),
+                    amount: 500
+                },
+                { upsert: true, new: true }
+            );
+            return res.status(200).json({ success: true, payment: mockPayment });
         }
 
         const session = await stripe.checkout.sessions.retrieve(sessionId);
