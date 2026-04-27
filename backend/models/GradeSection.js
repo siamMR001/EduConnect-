@@ -11,6 +11,7 @@ const gradeSectionSchema = new mongoose.Schema({
     sections: [{
         sectionName: { type: String, required: true }, // A, B, C, D, etc.
         maxStudents: { type: Number, required: true, default: 50 },
+        classTeacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Ref to teacher
         currentStudentCount: { type: Number, default: 0 },
         rollNumberStart: { type: Number }, // Starting roll number for this section
         rollNumberEnd: { type: Number },   // Ending roll number for this section

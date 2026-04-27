@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const GradeSection = require('../models/GradeSection');
 const StudentProfile = require('../models/StudentProfile');
+const Classroom = require('../models/Classroom');
 
 // Create or update grade and section configuration (Admin only)
 exports.createGradeConfiguration = async (req, res) => {

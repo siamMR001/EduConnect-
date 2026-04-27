@@ -5,7 +5,8 @@ import api from '../services/api';
 export default function AdminSettings() {
     const [settings, setSettings] = useState({
         admissionFee: 500,
-        attendanceEmailTemplate: ''
+        attendanceEmailTemplate: '',
+        geminiApiKey: ''
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -44,7 +45,7 @@ export default function AdminSettings() {
     if (loading) return <div className="p-8 text-white">Loading system configurations...</div>;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in py-10">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-4xl font-black text-white tracking-tight">System Settings</h1>
@@ -110,6 +111,31 @@ export default function AdminSettings() {
                                 ))}
                             </div>
                             <p className="text-slate-500 text-[10px] mt-3 font-medium">These tags will be replaced with real data when the email is sent.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* AI Configuration Settings */}
+                <div className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-purple-500/10 transition-colors"></div>
+                    <div className="flex items-center gap-3 mb-6">
+                        <Settings className="w-5 h-5 text-purple-400" />
+                        <h2 className="text-xl font-bold text-white">AI Personal Assistant Configuration</h2>
+                    </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Google Gemini API Key</label>
+                            <input 
+                                type="password" 
+                                value={settings.geminiApiKey || ''}
+                                onChange={e => setSettings({...settings, geminiApiKey: e.target.value})}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono outline-none focus:border-purple-500/50 transition-all font-medium"
+                                placeholder="Enter your Gemini API Key..."
+                            />
+                            <p className="text-slate-500 text-[10px] mt-2 font-medium">
+                                This key is required for the "AI Personal Assistant" and "Dashboard Summary" features.
+                                Get your free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-purple-400 hover:underline">Google AI Studio</a>.
+                            </p>
                         </div>
                     </div>
                 </div>

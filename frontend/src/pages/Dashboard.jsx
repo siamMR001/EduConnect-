@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Calendar, Bell, Plus, AlertCircle, ChevronRight, Settings, Users, FileText, CheckCircle, XCircle, Trash2, Pencil, X } from 'lucide-react';
 import { noticeAPI } from '../services/api';
+import AiPersonalAssistant from '../components/AiPersonalAssistant';
+
+// Mock data for initial visual wow factor before real data is populated
+const MOCK_NOTICES = [
+    { id: 1, title: 'Annual Sports Day 2026', content: 'We are excited to announce our upcoming sports day. Please ensure students come in their respective house colors. Registration for events closes next Friday.', priority: 'high', targetRole: 'all', createdAt: new Date().toISOString() },
+    { id: 2, title: 'Parent-Teacher Meeting', content: 'Mid-term PTM will be held this Saturday. Guardians are requested to book their slots via the portal early.', priority: 'urgent', targetRole: 'student', createdAt: new Date(Date.now() - 86400000).toISOString() },
+    { id: 3, title: 'New Library Books Added', content: 'Our library has been updated with 500 new titles across science fiction, biographies, and academic references. Check them out!', priority: 'normal', targetRole: 'all', createdAt: new Date(Date.now() - 172800000).toISOString() },
+];
+
+const MOCK_EVENTS = [
+    { id: 1, title: 'Science Fair Selection', description: 'Screening of projects for the national science fair entries.', date: new Date(Date.now() + 86400000 * 3).toISOString() },
+    { id: 2, title: 'Spring Festival', description: 'Cultural show and food stalls arranged by the senior classes.', date: new Date(Date.now() + 86400000 * 7).toISOString() },
+    { id: 3, title: 'Mid-Term Exams Begin', description: 'Theoretical exams for all classes will commence on this date.', date: new Date(Date.now() + 86400000 * 15).toISOString() },
+];
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -326,7 +340,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="w-full max-w-7xl mx-auto py-8 px-4 animate-fade-in-up">
+        <div className="w-full max-w-7xl mx-auto py-8 px-4">
             <header className="flex justify-between items-center mb-8 glass-panel py-4 px-6 border-b border-white/10">
                 <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-white tracking-tight">
                     Welcome back, {user.name?.split(' ')[0] || 'User'}
@@ -348,6 +362,13 @@ const Dashboard = () => {
             </header>
 
 
+
+            {/* AI Personal Assistant - Proactive Summary & Reactive Chat */}
+            {user.role?.toLowerCase() === 'student' && (
+                <div className="space-y-8 mb-8">
+                    <AiPersonalAssistant />
+                </div>
+            )}
 
             {/* Tab Navigation */}
             <div className="flex gap-4 mb-6 border-b border-white/10 pb-2 overflow-x-auto">
@@ -946,18 +967,5 @@ const Dashboard = () => {
         </div>
     );
 };
-
-// Mock data for initial visual wow factor before real data is populated
-const MOCK_NOTICES = [
-    { id: 1, title: 'Annual Sports Day 2026', content: 'We are excited to announce our upcoming sports day. Please ensure students come in their respective house colors. Registration for events closes next Friday.', priority: 'high', targetRole: 'all', createdAt: new Date().toISOString() },
-    { id: 2, title: 'Parent-Teacher Meeting', content: 'Mid-term PTM will be held this Saturday. Guardians are requested to book their slots via the portal early.', priority: 'urgent', targetRole: 'student', createdAt: new Date(Date.now() - 86400000).toISOString() },
-    { id: 3, title: 'New Library Books Added', content: 'Our library has been updated with 500 new titles across science fiction, biographies, and academic references. Check them out!', priority: 'normal', targetRole: 'all', createdAt: new Date(Date.now() - 172800000).toISOString() },
-];
-
-const MOCK_EVENTS = [
-    { id: 1, title: 'Science Fair Selection', description: 'Screening of projects for the national science fair entries.', date: new Date(Date.now() + 86400000 * 3).toISOString() },
-    { id: 2, title: 'Spring Festival', description: 'Cultural show and food stalls arranged by the senior classes.', date: new Date(Date.now() + 86400000 * 7).toISOString() },
-    { id: 3, title: 'Mid-Term Exams Begin', description: 'Theoretical exams for all classes will commence on this date.', date: new Date(Date.now() + 86400000 * 15).toISOString() },
-];
 
 export default Dashboard;

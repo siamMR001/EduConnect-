@@ -104,3 +104,79 @@
 .scroll-panel:hover::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.22);
 }
+/* Print Styles for Routine Export */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .no-print, 
+  nav, 
+  header, 
+  footer, 
+  button,
+  .sidebar,
+  .print-hidden,
+  .ai-assistant-container {
+    display: none !important;
+  }
+
+  .glass-panel {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    color: black !important;
+  }
+
+  th, td {
+    border: 1px solid #ddd !important;
+    color: black !important;
+    background: white !important;
+  }
+
+  .text-white, .text-slate-200, .text-slate-300, .text-slate-400, .text-slate-500 {
+    color: black !important;
+  }
+
+  .bg-primary, .bg-blue-500, .bg-indigo-500, .bg-primary/20, .bg-blue-500/10, .bg-indigo-500/10 {
+    background-color: #f3f4f6 !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .bg-black/20, .bg-white/5, .bg-white/[0.02], .bg-white/[0.01], .bg-black/30 {
+    background: transparent !important;
+  }
+
+  h1, h2, h3, h4 {
+    color: black !important;
+    margin-top: 0 !important;
+  }
+
+  div {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .animate-fade-in-up, .animate-fade-in {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  .max-w-5xl {
+    max-width: 100% !important;
+  }
+}

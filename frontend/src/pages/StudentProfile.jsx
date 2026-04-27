@@ -4,6 +4,7 @@ import {
     User, Mail, Phone, MapPin, Droplet, Calendar,
     BookOpen, Award, ArrowLeft, Shield, Briefcase, FileText, Download
 } from 'lucide-react';
+import StudentRoutine from '../components/StudentRoutine';
 
 const StudentProfile = () => {
     const navigate = useNavigate();
@@ -15,6 +16,7 @@ const StudentProfile = () => {
     const [formData, setFormData] = useState(null);
     const [fileUploads, setFileUploads] = useState({ studentPhoto: null, previousResultSheet: null, documentsPdf: [] });
     const [saving, setSaving] = useState(false);
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'routine'
     const currentUser = JSON.parse(localStorage.getItem('user'));
     const isAdmin = currentUser?.role === 'admin';
 
@@ -204,9 +206,31 @@ const StudentProfile = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Contact Information */}
-                <div className="space-y-6">
+            {/* Tab Navigation */}
+            <div className="flex items-center gap-2 mb-8 bg-black/20 p-1.5 rounded-2xl border border-white/10 w-fit">
+                <button 
+                    onClick={() => setActiveTab('overview')}
+                    className={`px-8 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'overview' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    <User size={16} /> Overview
+                </button>
+                <button 
+                    onClick={() => setActiveTab('routine')}
+                    className={`px-8 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'routine' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    <Calendar size={16} /> Class Routine
+                </button>
+            </div>
+
+            {activeTab === 'routine' ? (
+                <div className="glass-panel p-8 animate-fade-in-up">
+                    <StudentRoutine overriddenUserId={profile.user} />
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in-up">
+                    {/* Contact Information */}
+                    <div className="space-y-6">
+
                     <div className="glass-panel p-6">
                         <h2 className="text-xl font-semibold mb-6 text-white border-b border-white/10 pb-2">Family Information</h2>
                         <div className="space-y-6">
@@ -338,8 +362,9 @@ const StudentProfile = () => {
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        )}
+    </div>
+);
 };
 
 const Badge = ({ icon, text, className = '' }) => (

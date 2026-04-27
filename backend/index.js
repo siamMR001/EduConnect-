@@ -40,6 +40,8 @@ app.use('/api/submissions', require('./routes/submissionRoutes'));
 app.use('/api/classrooms', require('./routes/classroomRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/subjects', require('./routes/subjectRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
+// app.use('/api/timetable', require('./routes/timetableRoutes'));
 
 // Start Cron Jobs
 const { markLateAssignments } = require('./cron/assignmentsCron');

@@ -381,7 +381,7 @@ export default function ClassroomView() {
       </div>
 
       <div className="flex border-b border-white/10 space-x-8 mb-6 overflow-x-auto">
-        {['Feed', 'Routine', 'Attendance', 'Subjects', 'Assignments', 'Results', 'Members']
+        {['Feed', 'Class Routine', 'Attendance', 'Subjects', 'Assignments', 'Results', 'Members']
           .filter(tab => !(tab === 'Assignments' && user?.role === 'admin'))
           .map(tab => (
           <button
@@ -699,68 +699,121 @@ export default function ClassroomView() {
         </div>
       )}
 
-      {/* ROUTINE TAB */}
-      {activeTab === 'Routine' && (
+      {/* CLASS ROUTINE TAB */}
+      {activeTab === 'Class Routine' && (
         <div className="space-y-6 animate-fade-in-up">
-           <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-              {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => {
-                // Collect all slots for this day
-                const slots = [];
-                // Lead subject slots
-                if (classroom.leadSchedule) {
-                  classroom.leadSchedule.forEach(s => {
-                    if (s.day === day) slots.push({ subject: classroom.leadSubject, startTime: s.startTime, endTime: s.endTime, teacher: classroom.teacherId?.name, type: 'lead' });
-                  });
-                }
-                // Course slots
-                if (classroom.courses) {
-                  classroom.courses.forEach(c => {
-                    if (c.schedule) {
-                      c.schedule.forEach(s => {
-                        if (s.day === day) slots.push({ subject: c.courseName, startTime: s.startTime, endTime: s.endTime, teacher: c.teacherId?.name, type: 'course' });
-                      });
-                    }
-                  });
-                }
-
-                // Sort slots by time
-                slots.sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-                return (
-                  <div key={day} className={`flex flex-col gap-3 p-4 rounded-3xl border ${slots.length > 0 ? 'bg-white/[0.02] border-white/10' : 'bg-black/20 border-white/5 opacity-40'}`}>
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">{day.substring(0, 3)}</h3>
-                    {slots.map((slot, i) => (
-                      <div key={i} className={`p-3 rounded-2xl border ${slot.type === 'lead' ? 'bg-blue-500/10 border-blue-500/20' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
-                         <p className="text-white font-black text-xs mb-1">{slot.subject}</p>
-                         <div className="flex items-center gap-1.5 text-slate-400 text-[9px] font-bold uppercase tracking-tighter mb-2">
-                           <Clock className="w-3 h-3 text-slate-500" /> {slot.startTime} - {slot.endTime}
-                         </div>
-                         <div className="flex items-center gap-1.5 pt-2 border-t border-white/5">
-                           <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[8px] font-black text-white capitalize">
-                             {slot.teacher?.charAt(0)}
-                           </div>
-                           <span className="text-[9px] text-slate-500 font-bold truncate">{slot.teacher}</span>
-                         </div>
-                      </div>
+          <div className="flex justify-end no-print">
+            <button 
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-slate-300 transition-all active:scale-95"
+            >
+              <Download size={14} className="text-primary" /> Download Routine (PDF)
+            </button>
+          </div>
+          <div className="glass-panel p-6 rounded-3xl border border-white/10 relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] pointer-events-none"></div>
+            
+            <div>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="p-4 border-b border-white/10 text-xs font-black uppercase text-slate-500 text-left bg-white/[0.02]">Time Slot</th>
+                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
+                      <th key={day} className="p-4 border-b border-white/10 text-[10px] font-black uppercase text-slate-300 text-center min-w-[100px] bg-white/[0.02]">
+                        {day}
+                      </th>
                     ))}
-                    {slots.length === 0 && <div className="h-10"></div>}
-                  </div>
-                );
-              })}
-           </div>
-           
-           <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.02]">
-              <div className="flex items-center gap-4">
-                 <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Core Subject</span>
-                 </div>
-                 <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Auxiliary Courses</span>
-                 </div>
+                  </tr>
+                </thead>
+                <tbody>
+                  {["08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM"].map((time, idx) => (
+                    <tr key={idx} className="group hover:bg-white/[0.01] transition-colors">
+                      <td className="p-4 border-b border-white/5 text-xs font-black text-slate-500 whitespace-nowrap bg-black/20">
+                        {time}
+                      </td>
+                      {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => {
+                        // Find matches for this time and day
+                        const slots = [];
+                        const gridHour = parseInt(time.split(':')[0]); 
+                        
+                        // Lead schedule
+                        if (classroom.leadSchedule) {
+                          classroom.leadSchedule.forEach(s => {
+                            if (s.day === day && s.startTime) {
+                              const slotHour = parseInt(s.startTime.split(':')[0]);
+                              if (slotHour === gridHour) {
+                                slots.push({
+                                  subject: classroom.leadSubject,
+                                  teacher: classroom.teacherId?.name,
+                                  type: 'lead'
+                                });
+                              }
+                            }
+                          });
+                        }
+                        
+                        // Course schedules
+                        if (classroom.courses) {
+                          classroom.courses.forEach(c => {
+                            if (c.schedule) {
+                              c.schedule.forEach(s => {
+                                if (s.day === day && s.startTime) {
+                                  const slotHour = parseInt(s.startTime.split(':')[0]);
+                                  if (slotHour === gridHour) {
+                                    slots.push({
+                                      subject: c.courseName,
+                                      teacher: c.teacherId?.name,
+                                      type: 'course'
+                                    });
+                                  }
+                                }
+                              });
+                            }
+                          });
+                        }
+
+                        return (
+                          <td key={day} className="p-2 border-b border-white/5 align-top min-h-[80px]">
+                            {slots.map((slot, i) => (
+                              <div 
+                                key={i} 
+                                className={`p-2 rounded-xl border transition-all hover:scale-[1.02] cursor-default mb-2 last:mb-0 ${
+                                  slot.type === 'lead' 
+                                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-200' 
+                                    : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-200'
+                                }`}
+                              >
+                                <p className="text-[11px] font-black uppercase mb-1 leading-tight">{slot.subject}</p>
+                                <div className="flex items-center gap-1.5 opacity-60">
+                                  <User size={10} />
+                                  <span className="text-[9px] font-bold truncate">{slot.teacher}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.02] flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/50"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Class Teacher</span>
               </div>
-           </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-indigo-500/20 border border-indigo-500/50"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Subject Teacher</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 italic">Auto-generated based on the current section schedule.</p>
+          </div>
         </div>
       )}
 

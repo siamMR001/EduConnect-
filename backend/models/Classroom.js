@@ -29,7 +29,8 @@ const classroomSchema = new mongoose.Schema({
     leadSchedule: [{
         day: { type: String, enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
         startTime: String,
-        endTime: String
+        endTime: String,
+        roomNumber: String
     }],
     courses: [{
         courseName: String,
@@ -40,7 +41,8 @@ const classroomSchema = new mongoose.Schema({
         schedule: [{
             day: { type: String, enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
             startTime: String,
-            endTime: String
+            endTime: String,
+            roomNumber: String
         }]
     }],
     studentIds: [{

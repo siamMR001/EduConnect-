@@ -9,6 +9,51 @@ const StudentProfile = require('../models/StudentProfile');
 const { sendNotification } = require('./notificationController');
 const xlsx = require('xlsx');
 
+// --- Helper: Check Time Overlap ---
+const isOverlapping = (start1, end1, start2, end2) => {
+    // Basic string comparison works for "HH:mm" format
+    return (start1 < end2 && start2 < end1);
+};
+
+// --- Helper: Find Teacher Conflicts across all classrooms ---
+const checkTeacherConflicts = async (teacherId, schedule, academicYear, classroomId = null) => {
+    if (!teacherId || !schedule || !Array.isArray(schedule) || schedule.length === 0) return null;
+
+    // Find all other active classrooms for this academic year
+    const otherClassrooms = await Classroom.find({
+        academicYear,
+        isActive: true,
+        _id: { $ne: classroomId }
+    }).populate('teacherId', 'name');
+
+    for (const otherClass of otherClassrooms) {
+        // 1. Check if teacher is Lead Teacher in this other class
+        if (otherClass.teacherId?._id?.toString() === teacherId.toString()) {
+            for (const otherSlot of otherClass.leadSchedule || []) {
+                for (const mySlot of schedule) {
+                    if (mySlot.day === otherSlot.day && isOverlapping(mySlot.startTime, mySlot.endTime, otherSlot.startTime, otherSlot.endTime)) {
+                        return { class: otherClass.name, subject: otherClass.leadSubject, type: 'Lead' };
+                    }
+                }
+            }
+        }
+
+        // 2. Check if teacher teaches any courses in this other class
+        for (const course of otherClass.courses || []) {
+            if (course.teacherId?.toString() === teacherId.toString()) {
+                for (const otherSlot of course.schedule || []) {
+                    for (const mySlot of schedule) {
+                        if (mySlot.day === otherSlot.day && isOverlapping(mySlot.startTime, mySlot.endTime, otherSlot.startTime, otherSlot.endTime)) {
+                            return { class: otherClass.name, subject: course.courseName, type: 'Subject' };
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return null;
+};
+
 // --- Classroom Management ---
 
 exports.createClassroom = async (req, res) => {
@@ -23,9 +68,45 @@ exports.createClassroom = async (req, res) => {
         const finalCapacity = parseInt(capacity, 10) || 30;
 
         // Check if there is already this exact section for this class
-        const existing = await Classroom.findOne({ classNumber, section });
+        const existing = await Classroom.findOne({ classNumber, section, academicYear });
         if (existing) {
-            return res.status(400).json({ message: 'This section identity already exists for this grade' });
+            return res.status(400).json({ message: 'This section identity already exists for this grade in the selected academic year' });
+        }
+
+        // --- Lead Teacher Conflict Check ---
+        // A teacher can only lead ONE section per academic year
+        const teacherAlreadyLeading = await Classroom.findOne({ 
+            teacherId, 
+            academicYear,
+            isActive: true 
+        });
+
+        if (teacherAlreadyLeading) {
+            return res.status(400).json({ 
+                message: `Constraint Error: This teacher is already the Lead Teacher of ${teacherAlreadyLeading.name}. A teacher can only lead one section.` 
+            });
+        }
+
+        // --- Deep Conflict Check: Lead Teacher Schedule ---
+        const leadConflict = await checkTeacherConflicts(teacherId, leadSchedule, academicYear);
+        if (leadConflict) {
+            return res.status(400).json({
+                message: `Schedule Conflict: Lead Teacher has an overlap in ${leadConflict.class} (Subject: ${leadConflict.subject})`
+            });
+        }
+
+        // --- Deep Conflict Check: Course Teachers Schedule ---
+        if (Array.isArray(courses)) {
+            for (const course of courses) {
+                if (course.teacherId && course.schedule) {
+                    const courseConflict = await checkTeacherConflicts(course.teacherId, course.schedule, academicYear);
+                    if (courseConflict) {
+                        return res.status(400).json({
+                            message: `Schedule Conflict: Subject Teacher for "${course.courseName}" has an overlap in ${courseConflict.class} (Subject: ${courseConflict.subject})`
+                        });
+                    }
+                }
+            }
         }
 
         const classroom = new Classroom({
@@ -732,6 +813,50 @@ exports.updateClassroom = async (req, res) => {
         Object.keys(updatedData).forEach(key => {
             if (updatedData[key] === undefined) delete updatedData[key];
         });
+
+        const currentClassroom = await Classroom.findById(id);
+        if (!currentClassroom) return res.status(404).json({ message: 'Section not found' });
+
+        // If teacher is being changed, check for conflicts
+        if (teacherId && teacherId !== currentClassroom.teacherId?.toString()) {
+            const teacherAlreadyLeading = await Classroom.findOne({ 
+                _id: { $ne: id },
+                teacherId, 
+                academicYear: currentClassroom.academicYear,
+                isActive: true 
+            });
+
+            if (teacherAlreadyLeading) {
+                return res.status(400).json({ 
+                    message: `Constraint Error: This teacher is already the Lead Teacher of ${teacherAlreadyLeading.name}.` 
+                });
+            }
+        }
+
+        // --- Deep Conflict Check: Lead Teacher Schedule ---
+        if (leadSchedule && leadSchedule.length > 0) {
+            const lTeacherId = teacherId || currentClassroom.teacherId;
+            const leadConflict = await checkTeacherConflicts(lTeacherId, leadSchedule, currentClassroom.academicYear, id);
+            if (leadConflict) {
+                return res.status(400).json({
+                    message: `Schedule Conflict: Lead Teacher has an overlap in ${leadConflict.class} (Subject: ${leadConflict.subject})`
+                });
+            }
+        }
+
+        // --- Deep Conflict Check: Course Teachers Schedule ---
+        if (Array.isArray(courses)) {
+            for (const course of courses) {
+                if (course.teacherId && course.schedule) {
+                    const courseConflict = await checkTeacherConflicts(course.teacherId, course.schedule, currentClassroom.academicYear, id);
+                    if (courseConflict) {
+                        return res.status(400).json({
+                            message: `Schedule Conflict: Subject Teacher for "${course.courseName}" has an overlap in ${courseConflict.class} (Subject: ${courseConflict.subject})`
+                        });
+                    }
+                }
+            }
+        }
 
         const classroom = await Classroom.findByIdAndUpdate(id, updatedData, { new: true });
         if (!classroom) return res.status(404).json({ message: 'Section not found' });

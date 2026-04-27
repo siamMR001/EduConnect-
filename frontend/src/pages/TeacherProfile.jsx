@@ -5,12 +5,14 @@ import {
     Users, Briefcase, FileText, Download, Shield, ArrowLeft, CheckCircle
 } from 'lucide-react';
 import teacherService from '../services/teacherService';
+import TeacherRoutine from '../components/TeacherRoutine';
 
 const TeacherProfile = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'routine'
     const currentUser = JSON.parse(localStorage.getItem('user'));
 
     useEffect(() => {
@@ -124,9 +126,30 @@ const TeacherProfile = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
-                {/* Left Column: Personal Info */}
-                <div className="lg:col-span-2 space-y-8">
+            {/* Tab Navigation */}
+            <div className="flex items-center gap-2 mb-8 bg-black/20 p-1.5 rounded-2xl border border-white/10 w-fit">
+                <button 
+                    onClick={() => setActiveTab('overview')}
+                    className={`px-8 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'overview' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    <User size={16} /> Overview
+                </button>
+                <button 
+                    onClick={() => setActiveTab('routine')}
+                    className={`px-8 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'routine' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    <Calendar size={16} /> Class Routine
+                </button>
+            </div>
+
+            {activeTab === 'routine' ? (
+                <div className="glass-panel p-8 animate-fade-in-up">
+                    <TeacherRoutine teacherId={profile.user} />
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12 animate-fade-in-up">
+                    {/* Left Column: Personal Info */}
+                    <div className="lg:col-span-2 space-y-8">
                     {/* Basic Info */}
                     <div className="glass-panel p-8 rounded-3xl border border-white/10">
                         <h2 className="text-xl font-black text-white mb-6 flex items-center gap-3">
@@ -217,8 +240,9 @@ const TeacherProfile = () => {
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        )}
+    </div>
+);
 };
 
 export default TeacherProfile;

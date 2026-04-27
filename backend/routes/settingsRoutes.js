@@ -35,6 +35,9 @@ router.put('/', async (req, res) => {
         if (attendanceEmailTemplate !== undefined) {
             settings.attendanceEmailTemplate = attendanceEmailTemplate;
         }
+        if (req.body.geminiApiKey !== undefined) {
+            settings.geminiApiKey = req.body.geminiApiKey;
+        }
 
         await settings.save();
         res.json({ message: 'Settings updated successfully', settings });
