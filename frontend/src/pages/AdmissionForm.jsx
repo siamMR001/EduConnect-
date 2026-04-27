@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, ChevronRight, CheckCircle, School, AlertCircle, Upload, CreditCard } from 'lucide-react';
+import { UserPlus, ChevronRight, CheckCircle, School, AlertCircle, Upload, CreditCard, Lock } from 'lucide-react';
+import PaymentModal from '../components/PaymentModal';
 
 // Helper for rendering inputs
 const Input = ({ label, name, type = "text", req = false, isFile = false, multi = false, acc, formData, handleChange, handleFileChange, fileValue }) => {
@@ -79,6 +80,7 @@ const AdmissionForm = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [admissionFee, setAdmissionFee] = useState(500);
     const [previewStudentId, setPreviewStudentId] = useState('');
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/settings`)
@@ -122,7 +124,7 @@ const AdmissionForm = () => {
             const data = await res.json();
             if (res.ok && data.studentId) {
                 setPreviewStudentId(data.studentId);
-                setCurrentStep(2);
+                setIsPaymentModalOpen(true); // Open real Stripe modal instead of jumping to step 2
             } else {
                 setError('Failed to generate preview Student ID');
             }
@@ -132,7 +134,12 @@ const AdmissionForm = () => {
         }
     };
 
-    const handlePaymentConfirm = async () => {
+    const handlePaymentSuccess = async (paymentIntentId, method) => {
+        setIsPaymentModalOpen(false);
+        handlePaymentConfirm(paymentIntentId, method);
+    };
+
+    const handlePaymentConfirm = async (paymentIntentId, method) => {
         setIsSubmitting(true);
         setError(null);
 
@@ -166,7 +173,13 @@ const AdmissionForm = () => {
                     submissionData.append(key, submitData[key] || '');
                 }
             });
-            submissionData.append('paymentStatus', 'paid');
+            const isInstant = ['stripe', 'apple_pay', 'google_pay'].includes(method);
+            submissionData.append('paymentStatus', isInstant ? 'paid' : 'pending_verification');
+            submissionData.append('paymentMethod', method);
+
+            if (paymentIntentId) {
+                submissionData.append('paymentIntentId', paymentIntentId);
+            }
 
             // Append File Fields
             Object.keys(submitFiles).forEach(key => {
@@ -236,18 +249,15 @@ const AdmissionForm = () => {
                 </h1>
                 <p className="text-slate-400 mt-3 text-lg">Comprehensive Application Form for 2026/2027</p>
             </div>
-
             <div className="glass-panel p-8 md:p-12 animate-fade-in-up">
-                {error && (
-                    <div className="mb-8 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400 text-center font-medium flex items-center justify-center gap-2">
-                        <AlertCircle size={20} />
-                        {error}
-                    </div>
-                )}
+                    {error && (
+                        <div className="mb-8 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400 text-center font-medium flex items-center justify-center gap-2">
+                            <AlertCircle size={20} />
+                            {error}
+                        </div>
+                    )}
 
-                {currentStep === 1 ? (
                     <form onSubmit={handleProceedToPayment} className="space-y-12">
-
                         {/* Section 1: Student Details */}
                         <div>
                             <h3 className="text-xl font-semibold border-b border-white/10 pb-2 mb-6 text-white text-primary-light">1. Student Information</h3>
@@ -403,51 +413,17 @@ const AdmissionForm = () => {
                             </button>
                         </div>
                     </form>
-                ) : (
-                    <div className="max-w-md mx-auto space-y-8 animate-fade-in-up">
-                        <div className="text-center space-y-2">
-                            <div className="mx-auto w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center border border-blue-500/30 mb-4">
-                                <CreditCard size={32} className="text-blue-400" />
-                            </div>
-                            <h3 className="text-2xl font-bold text-white">Admission Processing Fee</h3>
-                            <p className="text-slate-400">Student ID Preview: <span className="text-primary-light font-bold text-lg ml-1">{previewStudentId}</span></p>
-                        </div>
+                </div>
 
-                        <div className="bg-black/30 p-6 rounded-xl border border-white/5 space-y-4">
-                            <div className="flex justify-between items-center pb-4 border-b border-white/10">
-                                <span className="text-slate-400">Total Amount</span>
-                                <span className="text-3xl font-bold text-primary-light">৳{admissionFee}</span>
-                            </div>
-
-                            <div className="space-y-4 pt-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Card Number</label>
-                                    <input type="text" placeholder="XXXX XXXX XXXX XXXX" className="input-field" defaultValue="1234 5678 9012 3456" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-1">Expiry</label>
-                                        <input type="text" placeholder="MM/YY" className="input-field" defaultValue="12/28" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-1">CVC</label>
-                                        <input type="text" placeholder="123" className="input-field" defaultValue="123" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-4 pt-4">
-                            <button onClick={() => setCurrentStep(1)} type="button" className="btn-secondary flex-1 py-3 text-lg" disabled={isSubmitting}>
-                                Go Back
-                            </button>
-                            <button onClick={handlePaymentConfirm} type="button" className="btn-primary flex-1 py-3 text-lg flex items-center justify-center gap-2" disabled={isSubmitting}>
-                                {isSubmitting ? 'Processing...' : `Pay ৳${admissionFee} & Submit`}
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
+            <PaymentModal 
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                amount={admissionFee * 100} // Convert to cents for Stripe
+                studentId={previewStudentId}
+                studentData={{ name: `${formData.firstName} ${formData.lastName}` }}
+                type="admission"
+                onSuccess={handlePaymentSuccess}
+            />
         </div>
     );
 };

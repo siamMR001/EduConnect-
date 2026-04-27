@@ -6,7 +6,9 @@ export default function AdminSettings() {
     const [settings, setSettings] = useState({
         admissionFee: 500,
         attendanceEmailTemplate: '',
-        geminiApiKey: ''
+        geminiApiKey: '',
+        monthlyBusFare: 100,
+        busFinePerDay: 10
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -73,12 +75,36 @@ export default function AdminSettings() {
                     <div className="max-w-xs">
                         <label className="block text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Default Admission Fee</label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">BDT</span>
                             <input 
                                 type="number" 
                                 value={settings.admissionFee}
-                                onChange={e => setSettings({...settings, admissionFee: e.target.value})}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white font-bold outline-none focus:border-emerald-500/50 transition-all"
+                                onChange={e => setSettings({...settings, admissionFee: Number(e.target.value)})}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white font-bold outline-none focus:border-emerald-500/50 transition-all"
+                            />
+                        </div>
+                    </div>
+                    <div className="max-w-xs mt-4">
+                        <label className="block text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Monthly Bus Fare</label>
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">BDT</span>
+                            <input 
+                                type="number" 
+                                value={settings.monthlyBusFare}
+                                onChange={e => setSettings({...settings, monthlyBusFare: Number(e.target.value)})}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white font-bold outline-none focus:border-emerald-500/50 transition-all"
+                            />
+                        </div>
+                    </div>
+                    <div className="max-w-xs mt-4">
+                        <label className="block text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Bus Fine Per Day (After 6 Months)</label>
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">BDT</span>
+                            <input 
+                                type="number" 
+                                value={settings.busFinePerDay}
+                                onChange={e => setSettings({...settings, busFinePerDay: Number(e.target.value)})}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white font-bold outline-none focus:border-emerald-500/50 transition-all"
                             />
                         </div>
                     </div>

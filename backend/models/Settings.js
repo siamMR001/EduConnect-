@@ -8,7 +8,9 @@ const settingsSchema = new mongoose.Schema({
         type: String, 
         default: "Dear Guardian,\n\nWe would like to inform you that your ward, {{studentName}}, was marked ABSENT today ({{date}}) at EduConnect Academy.\n\nPlease ensure their regular attendance for optimal academic progress.\n\nRegards,\nEduConnect Administration" 
     },
-    geminiApiKey: { type: String, default: "" }
+    geminiApiKey: { type: String, default: "" },
+    monthlyBusFare: { type: Number, default: 100 },
+    busFinePerDay: { type: Number, default: 10 }
 });
 
 const Settings = mongoose.model('Settings', settingsSchema);

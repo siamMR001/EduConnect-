@@ -54,6 +54,16 @@ exports.registerUser = async (req, res) => {
             if (requestedRole === 'student') {
                 try {
                     existingProfile.user = user._id;
+                    const isInstant = ['stripe', 'apple_pay', 'google_pay'].includes(req.body.paymentMethod);
+                    
+                    if (req.body.paymentIntentId) {
+                        existingProfile.paymentIntentId = req.body.paymentIntentId;
+                        existingProfile.registrationPaymentStatus = 'paid';
+                    } else if (req.body.paymentMethod) {
+                        existingProfile.paymentMethod = req.body.paymentMethod;
+                        existingProfile.transactionId = req.body.transactionId;
+                        existingProfile.registrationPaymentStatus = 'pending_verification';
+                    }
                     await existingProfile.save();
                     
                     // Also link studentProfile back to user for direct population support
@@ -80,6 +90,7 @@ exports.registerUser = async (req, res) => {
                         name: user.name,
                         email: user.email,
                         role: user.role,
+                        paymentStatus: existingProfile.registrationPaymentStatus,
                         token: generateToken(user._id, user.role),
                     });
                 } catch (profileError) {
@@ -112,20 +123,22 @@ exports.loginUser = async (req, res) => {
 
         let user;
         if (!searchKey.includes('@')) {
+            // Case-insensitive search for profiles
             const studentProfile = await StudentProfile.findOne({ studentId: { $regex: new RegExp(`^${searchKey}$`, 'i') } });
             const employeeProfile = await EmployeeID.findOne({ employeeId: { $regex: new RegExp(`^${searchKey}$`, 'i') } });
             
             if (studentProfile) {
                 if (!studentProfile.user) {
-                    return res.status(401).json({ message: 'Student ID found but not registered yet. Please go to Register tab.' });
+                    return res.status(401).json({ message: 'Student account not registered yet. Please click Register.' });
                 }
                 user = await User.findById(studentProfile.user);
             } else if (employeeProfile) {
                 if (!employeeProfile.user) {
-                    return res.status(401).json({ message: 'Teacher ID found but not registered yet. Please go to Register tab.' });
+                    return res.status(401).json({ message: 'Employee account not registered yet. Please use the registration link.' });
                 }
                 user = await User.findById(employeeProfile.user);
             } else {
+                // Fallback: search as an email even if no @ is present (unlikely but possible if email was stored without @)
                 user = await User.findOne({ email: searchKey.toLowerCase() });
             }
         } else {
@@ -201,7 +214,7 @@ exports.registerTeacher = async (req, res) => {
             name: `${employee.firstName} ${employee.lastName}`,
             email: targetEmail,
             password,
-            role: employee.employeeType === 'teacher' ? 'teacher' : 'admin',
+            role: employee.employeeType === 'teacher' ? 'teacher' : (employee.employeeType === 'employee' ? 'employee' : 'admin'),
             employeeId: employee._id
         });
 

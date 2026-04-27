@@ -17,8 +17,9 @@ exports.submitAssignment = async (req, res) => {
             return res.status(404).json({ message: 'Assignment not found' });
         }
 
-        // Check if deadline has passed
-        const isLate = new Date() > new Date(assignment.deadline);
+        // Check if deadline has passed (fallback to dueDate for classroom assignments)
+        const deadlineDate = assignment.deadline || assignment.dueDate;
+        const isLate = deadlineDate ? new Date() > new Date(deadlineDate) : false;
 
         // Check for existing submission
         let submission = await Submission.findOne({
@@ -57,20 +58,24 @@ exports.submitAssignment = async (req, res) => {
             assignment.submissionCount += 1;
             await assignment.save();
         }
-
-        await submission.save();
+        if (submission.isModified()) {
+            await submission.save();
+        }
 
         // Notify teacher
-        const teacher = await User.findById(assignment.createdBy);
-        if (teacher) {
-            await Notification.create({
-                title: `New Submission: ${assignment.title}`,
-                message: `${req.user.name} submitted the assignment "${assignment.title}"${isLate ? ' (LATE)' : ''}`,
-                type: 'submission',
-                recipient: assignment.createdBy,
-                relatedId: submission._id,
-                priority: isLate ? 'high' : 'normal'
-            });
+        const teacherId = assignment.createdBy || assignment.teacherId;
+        if (teacherId) {
+            const teacher = await User.findById(teacherId).catch(() => null);
+            if (teacher) {
+                await Notification.create({
+                    title: `New Submission: ${assignment.title}`,
+                    message: `${req.user.name} submitted the assignment "${assignment.title}"${isLate ? ' (LATE)' : ''}`,
+                    type: 'submission',
+                    recipients: [teacherId],
+                    relatedId: submission._id,
+                    priority: isLate ? 'high' : 'normal'
+                });
+            }
         }
 
         res.status(201).json({

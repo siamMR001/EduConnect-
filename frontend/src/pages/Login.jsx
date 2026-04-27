@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Mail, ChevronRight, School } from 'lucide-react';
+import { User, Lock, Mail, ChevronRight, School, CreditCard } from 'lucide-react';
+import PaymentModal from '../components/PaymentModal';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -13,6 +14,7 @@ const Login = () => {
     const [rememberMe, setRememberMe] = useState(!!savedEmail);
 
     const [isLoading, setIsLoading] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [error, setError] = useState(null);
 
     const handleSubmit = async (e) => {
@@ -27,6 +29,17 @@ const Login = () => {
                     prefillPassword: formData.password 
                 } 
             });
+            return;
+        }
+
+        // Student registration flow with Stripe
+        if (!isLoginMode && activeTab === 'student') {
+            // Basic validation before opening payment
+            if (!formData.email || !formData.password || !formData.studentId) {
+                setError('Please fill in all fields before proceeding to payment.');
+                return;
+            }
+            setIsPaymentModalOpen(true);
             return;
         }
 
@@ -69,6 +82,54 @@ const Login = () => {
         }
     };
 
+    const handlePaymentSuccess = async (paymentIntentId, method) => {
+        setIsPaymentModalOpen(false);
+        setIsLoading(true);
+        setError(null);
+
+        const payload = { 
+            ...formData, 
+            role: 'student', 
+            paymentIntentId, 
+            paymentMethod: method,
+            transactionId: method !== 'stripe' ? paymentIntentId : undefined // For Stripe, we use intent ID as txn ID for now or it's handled separately
+        };
+
+        // Note: For manual payments, PaymentModal handles the 'submit-manual' for existing records, 
+        // but for account creation, we need to pass it to register endpoint.
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                if (data.paymentStatus === 'pending_verification') {
+                    setError('Registration submitted. Your account will be activated once admin verifies your payment.');
+                    setIsLoading(false);
+                } else {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data));
+
+                    if (rememberMe) {
+                        localStorage.setItem('rememberedEmail', formData.email);
+                    }
+
+                    navigate('/dashboard');
+                }
+            } else {
+                setError(data.message || 'Registration failed after payment. Please contact admin.');
+                setIsLoading(false);
+            }
+        } catch (err) {
+            setError('Network error during registration. Please contact admin.');
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="w-full min-h-screen flex flex-col pt-8 px-4">
             {/* Top Navigation Bar */}
@@ -105,7 +166,7 @@ const Login = () => {
                                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                                     }`}
                             >
-                                {role.replace('_', '/')}
+                                {role === 'student' ? 'Student/Guardian' : role === 'teacher' ? 'Teacher/Employee' : role}
                             </button>
                         ))}
                     </div>
@@ -193,8 +254,12 @@ const Login = () => {
                             disabled={isLoading}
                             className="w-full btn-primary flex justify-center items-center space-x-2 group mt-2"
                         >
-                            <span>{isLoading ? 'Processing...' : (isLoginMode ? 'Sign In' : 'Create Account')}</span>
-                            {!isLoading && <ChevronRight className="group-hover:translate-x-1 transition-transform" size={20} />}
+                            <span>
+                                {isLoading ? 'Processing...' : 
+                                 (isLoginMode ? 'Sign In' : 
+                                  (activeTab === 'student' ? 'Pay & Register' : 'Create Account'))}
+                            </span>
+                            {!isLoading && (activeTab === 'student' && !isLoginMode ? <CreditCard size={18} className="group-hover:scale-110 transition-transform" /> : <ChevronRight className="group-hover:translate-x-1 transition-transform" size={20} />)}
                         </button>
 
                         <div className="text-center mt-4 text-sm text-slate-400">
@@ -230,6 +295,16 @@ const Login = () => {
                     &copy; {new Date().getFullYear()} Edu-Connect. Empowering Education.
                 </p>
             </div>
+
+            <PaymentModal 
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                amount={5000} // $50.00
+                studentId={formData.studentId}
+                studentData={{ name: formData.name }}
+                type="registration"
+                onSuccess={handlePaymentSuccess}
+            />
         </div>
     );
 };

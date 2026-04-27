@@ -258,9 +258,7 @@ export default function ClassroomView() {
     if (submitText.trim()) formData.append('submissionText', submitText.trim());
     try {
       setSubmitting(true);
-      await api.post(`/submissions/${submitModal.assignmentId}/submit`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post(`/submissions/${submitModal.assignmentId}/submit`, formData);
       setSubmitModal(null);
       setSubmitFiles([]);
       setSubmitText('');

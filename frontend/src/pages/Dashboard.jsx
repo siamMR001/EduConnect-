@@ -349,7 +349,7 @@ const Dashboard = () => {
                     <div className="text-right hidden sm:block">
                         <p className="text-sm font-medium text-slate-200">{user.name || 'User'}</p>
                         <p className="text-xs text-slate-400 capitalize hover:text-primary transition-colors cursor-pointer">
-                            {user.role?.replace('_', '/') || 'Role'} Role
+                            {user.role === 'student' ? 'Student/Guardian' : user.role === 'teacher' ? 'Teacher/Employee' : (user.role?.replace('_', '/') || 'Role')} Role
                         </p>
                     </div>
                     {user.role?.toLowerCase() === 'admin' && (
