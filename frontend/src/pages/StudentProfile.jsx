@@ -256,6 +256,7 @@ const StudentProfile = () => {
                                 <DetailRow icon={<User size={16} />} label="Name" value={profile.guardianName} isEditing={isEditing} editValue={formData?.guardianName} onChange={(val) => setFormData({...formData, guardianName: val})} />
                                 <DetailRow icon={<Phone size={16} />} label="Phone" value={profile.guardianPhone} isEditing={isEditing} editValue={formData?.guardianPhone} onChange={(val) => setFormData({...formData, guardianPhone: val})} />
                                 <DetailRow icon={<Mail size={16} />} label="Email" value={profile.guardianEmail || 'N/A'} isEditing={isEditing} editValue={formData?.guardianEmail} onChange={(val) => setFormData({...formData, guardianEmail: val})} />
+                                <DetailRow icon={<Briefcase size={16} />} label="Relation" value={profile.guardianRelation} isEditing={isEditing} editValue={formData?.guardianRelation} onChange={(val) => setFormData({...formData, guardianRelation: val})} />
                             </div>
                         </div>
                     </div>
@@ -395,7 +396,5 @@ const DetailRow = ({ icon, label, value, isEditing, editValue, onChange, type = 
         </span>
     </div>
 );
-
-
 
 export default StudentProfile;

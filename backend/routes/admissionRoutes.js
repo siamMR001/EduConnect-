@@ -5,6 +5,7 @@ const path = require('path');
 const Admission = require('../models/Admission');
 const User = require('../models/User');
 const StudentProfile = require('../models/StudentProfile');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Configure Multer storage
 const storage = multer.diskStorage({
@@ -93,11 +94,23 @@ router.post('/', function (req, res, next) {
             }
         }
 
+        const isInstant = ['stripe', 'apple_pay', 'google_pay'].includes(admissionData.paymentMethod);
+        
+        if (admissionData.paymentMethod === 'stripe_checkout') {
+            admissionData.paymentStatus = 'pending';
+        } else if (isInstant) {
+            admissionData.paymentStatus = 'paid';
+        } else {
+            admissionData.paymentStatus = 'pending_verification';
+        }
+
         const newAdmission = await Admission.create(admissionData);
+
         res.status(201).json({
             message: 'Application submitted successfully',
             studentId: newAdmission.studentId,
-            status: newAdmission.status
+            status: newAdmission.status,
+            email: newAdmission.guardianEmail || newAdmission.fatherEmail
         });
     } catch (error) {
         console.error("Admission DB Error:", error);
@@ -256,6 +269,69 @@ router.patch('/:id/status', async (req, res) => {
         res.status(500).json({ 
             message: `Update failed: ${error.message}`,
             error: error.message
+        });
+    }
+});
+
+// Finalize Stripe Checkout
+router.post('/finalize-checkout', async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        console.log(`Finalizing checkout for session: ${sessionId}`);
+        
+        // 1. Check if this session has already been processed to prevent duplicates on refresh
+        const existingProcessed = await Admission.findOne({ stripeSessionId: sessionId });
+        if (existingProcessed && existingProcessed.paymentStatus === 'paid') {
+            console.log(`Session ${sessionId} already processed for Student: ${existingProcessed.studentId}`);
+            return res.status(200).json({ 
+                success: true, 
+                studentId: existingProcessed.studentId,
+                message: 'Already processed' 
+            });
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        console.log(`Stripe session status: ${session.payment_status}`);
+
+        if (session.payment_status === 'paid') {
+            const studentId = session.client_reference_id || (session.metadata && session.metadata.studentId);
+            
+            if (!studentId) {
+                 return res.status(400).json({ message: 'Student ID not found in checkout session.' });
+            }
+            
+            console.log(`Found studentId in session: ${studentId}`);
+            
+            const admission = await Admission.findOne({ studentId });
+
+            if (!admission) {
+                console.log(`Admission not found for studentId: ${studentId}`);
+                return res.status(404).json({ message: `Admission record not found for Student ID: ${studentId}` });
+            }
+
+            // 2. Mark as paid and save the session ID
+            admission.paymentStatus = 'paid';
+            admission.paymentIntentId = session.payment_intent;
+            admission.stripeSessionId = sessionId; // Prevent re-processing
+            await admission.save();
+            console.log(`Admission record updated for ${studentId}. Awaiting manual admin approval.`);
+            
+            res.status(200).json({ success: true, studentId, status: 'pending_approval' });
+        } else {
+            console.log(`Payment not verified. Status: ${session.payment_status}`);
+            res.status(400).json({ message: `Payment not verified. Stripe status: ${session.payment_status}` });
+        }
+    } catch (error) {
+        console.error('Finalize checkout error details:', error);
+        
+        if (error.code === 11000) {
+            return res.status(409).json({ message: 'Student already registered. Please login.' });
+        }
+
+        res.status(500).json({ 
+            message: 'Server error while creating student account.', 
+            error: error.message,
+            details: error.errors ? Object.keys(error.errors).map(e => error.errors[e].message).join(', ') : error.stack
         });
     }
 });

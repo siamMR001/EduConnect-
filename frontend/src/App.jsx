@@ -45,6 +45,8 @@ import BusFare from './pages/BusFare';
 import AdminPayments from './pages/AdminPayments';
 import AdminExpenses from './pages/AdminExpenses';
 import AdminAnalytics from './pages/AdminAnalytics';
+import RegistrationSuccess from './pages/RegistrationSuccess';
+import StudentPayments from './pages/StudentPayments';
 
 
 const Sidebar = ({ user, isOpen, setIsOpen }) => {
@@ -143,13 +145,13 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
           <div className={`flex items-center gap-3 p-2 rounded-2xl transition-all duration-300 ${isOpen ? 'justify-center' : 'hover:bg-white/[0.03]'}`}>
             <div className="relative flex-shrink-0">
                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-primary-dark flex items-center justify-center text-white font-black text-sm border border-white/10 shadow-lg shadow-primary/20">
-                 {user.name?.charAt(0) || 'A'}
+                 {user?.name?.charAt(0) || 'A'}
                </div>
                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#1a1a2e] rounded-full shadow-sm"></div>
             </div>
             {!isOpen && (
               <div className="animate-fade-in flex-1 overflow-hidden">
-                <p className="text-sm font-bold text-white truncate">{user.name || 'Admin User'}</p>
+                <p className="text-sm font-bold text-white truncate">{user?.name || 'Admin User'}</p>
                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-tighter">Administrator</p>
               </div>
             )}
@@ -159,6 +161,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
     </>
   );
 };
+
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -231,6 +234,18 @@ function App() {
                   <CalendarIcon size={18} /> Calendar
                 </Link>
                 
+                {user?.role === 'teacher' && (
+                  <Link to='/teacher-assignments' className="text-slate-400 hover:text-white font-bold text-sm transition-all hover:-translate-y-0.5 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5">
+                    <ClipboardList size={18} /> Assignments
+                  </Link>
+                )}
+
+                {user?.role === 'student' && (
+                  <Link to="/payments" className="text-slate-400 hover:text-white font-bold text-sm transition-all hover:-translate-y-0.5 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5">
+                    <DollarSign size={18} /> Payments
+                  </Link>
+                )}
+
                 {(user?.role === 'student' || user?.role === 'admin') && (
                   <Link to="/track-bus" className="text-slate-400 hover:text-white font-bold text-sm transition-all hover:-translate-y-0.5 flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5">
                     <Bus size={18} /> Track Bus
@@ -282,6 +297,7 @@ function App() {
             <Route path="/student-assignments" element={isLoggedIn && user?.role === 'student' ? <StudentAssignments /> : <Navigate to="/dashboard" replace />} />
             <Route path="/teacher-assignments" element={isLoggedIn && user?.role === 'teacher' ? <TeacherAssignments /> : <Navigate to="/dashboard" replace />} />
             <Route path="/apply" element={<AdmissionForm />} />
+            <Route path="/registration-success" element={<RegistrationSuccess />} />
             <Route path="/profile" element={isLoggedIn ? (user?.role === 'student' ? <StudentProfile /> : <TeacherProfile />) : <Navigate to="/login" replace />} />
             <Route path="/profile/:id" element={isLoggedIn && (user?.role === 'admin' || user?.role === 'teacher') ? <StudentProfile /> : <Navigate to="/dashboard" replace />} />
             <Route path="/directory" element={isLoggedIn && user?.role !== 'student' ? <StudentDirectory /> : <Navigate to="/dashboard" replace />} />
@@ -297,7 +313,7 @@ function App() {
             <Route path="/admin/settings" element={isLoggedIn && user?.role === 'admin' ? <AdminSettings /> : <Navigate to="/dashboard" replace />} />
             <Route path="/bus-driver" element={isLoggedIn && user?.role === 'employee' ? <BusDriverPanel /> : <Navigate to="/dashboard" replace />} />
             <Route path="/track-bus" element={isLoggedIn ? <BusTrackingMap /> : <Navigate to="/login" replace />} />
-            <Route path="/bus-fare" element={isLoggedIn && user?.role === 'student' ? <BusFare /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/payments" element={isLoggedIn && user?.role === 'student' ? <StudentPayments /> : <Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />} />
           </Routes>
         </main>
