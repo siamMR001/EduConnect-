@@ -440,6 +440,92 @@ const AdminPayments = () => {
         setTimeout(() => { win.print(); }, 600);
     };
 
+    const handlePrintVoucher = (p) => {
+        const isMonthly = p.type === 'Monthly Fee' || p.type === 'General Payment';
+        const periodLabel = isMonthly ? `${p.month || 'N/A'} ${p.year || ''}` : 'Admission/Registration';
+        
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Payment Voucher — ${p.studentId}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#111;background:#fff;padding:50px}
+    .voucher-card{border:4px solid #111;padding:40px;position:relative;max-width:800px;margin:0 auto}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:20px;margin-bottom:30px}
+    .school-name{font-size:24px;font-weight:900;text-transform:uppercase}
+    .voucher-title{font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-top:4px}
+    .stamp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-15deg);border:6px solid #16a34a;color:#16a34a;padding:10px 30px;font-size:50px;font-weight:900;text-transform:uppercase;opacity:0.15;border-radius:15px;pointer-events:none}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:40px}
+    .info-item{margin-bottom:15px}
+    .label{font-size:10px;font-weight:900;text-transform:uppercase;color:#888;letter-spacing:0.1em;margin-bottom:4px}
+    .value{font-size:16px;font-weight:800;color:#111}
+    .amount-box{background:#111;color:#fff;padding:25px;border-radius:10px;text-align:center;margin-bottom:40px}
+    .amount-label{font-size:10px;font-weight:900;text-transform:uppercase;opacity:0.6;margin-bottom:10px;letter-spacing:0.2em}
+    .amount-val{font-size:40px;font-weight:900;font-family:monospace}
+    .footer{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:60px}
+    .sig-block{border-top:2px solid #111;padding-top:10px;text-align:center}
+    .sig-label{font-size:10px;font-weight:900;text-transform:uppercase;color:#888}
+    @media print{body{padding:20px}}
+  </style>
+</head>
+<body>
+  <div class="voucher-card">
+    <div class="stamp">PAID</div>
+    <div class="header">
+      <div>
+        <div class="school-name">EduConnect Academy</div>
+        <div class="voucher-title">Official Payment Voucher</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;font-weight:900">${new Date(p.date).toLocaleDateString()}</div>
+        <div style="font-size:9px;color:#888;margin-top:4px">TXID: ${p.transactionId}</div>
+      </div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">Student Name</div>
+        <div class="value">${p.studentName}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Student ID</div>
+        <div class="value">${p.studentId}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Payment Type</div>
+        <div class="value">${p.type}</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Period / Month</div>
+        <div class="value">${periodLabel}</div>
+      </div>
+    </div>
+
+    <div class="amount-box">
+      <div class="amount-label">Net Amount Received</div>
+      <div class="amount-val">৳${p.amount.toLocaleString()}</div>
+    </div>
+
+    <div style="margin-bottom:40px">
+      <div class="label">Payment Method</div>
+      <div class="value" style="text-transform:uppercase">${p.method}</div>
+    </div>
+
+    <div class="footer">
+      <div class="sig-block"><div class="sig-label">Accountant Signature</div></div>
+      <div class="sig-block"><div class="sig-label">Administrative Seal</div></div>
+    </div>
+  </div>
+  <script>window.print(); setTimeout(() => window.close(), 500);</script>
+</body>
+</html>`;
+        const win = window.open('', '_blank', 'width=850,height=850');
+        win.document.write(html);
+        win.document.close();
+    };
+
 
     const resetFilters = () => {
         setSearchTerm('');
@@ -523,9 +609,9 @@ const AdminPayments = () => {
                 ) : (
                     <>
                         <KPICard label="Transactions" value={filteredHistory.length} icon={FileText} color="text-primary" />
-                        <KPICard label="Admission Revenue" value={`$${filteredHistory.filter(p => p.type === 'Admission Fee').reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}`} icon={Landmark} color="text-emerald-400" />
-                        <KPICard label="Registration Revenue" value={`$${filteredHistory.filter(p => p.type === 'Registration Fee').reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}`} icon={Smartphone} color="text-blue-400" />
-                        <KPICard label="Net Income" value={`$${totalIncome.toLocaleString()}`} icon={Banknote} color="text-green-500" />
+                        <KPICard label="Admission Revenue" value={`৳${filteredHistory.filter(p => p.type === 'Admission Fee').reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}`} icon={Landmark} color="text-emerald-400" />
+                        <KPICard label="Registration Revenue" value={`৳${filteredHistory.filter(p => p.type === 'Registration Fee').reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}`} icon={Smartphone} color="text-blue-400" />
+                        <KPICard label="Net Income" value={`৳${totalIncome.toLocaleString()}`} icon={Banknote} color="text-green-500" />
                     </>
                 )}
             </div>
@@ -789,7 +875,7 @@ const AdminPayments = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <p className="text-sm font-black text-emerald-400 font-mono">${(p.amount || 0).toLocaleString()}</p>
+                                            <p className="text-sm font-black text-emerald-400 font-mono">৳{(p.amount || 0).toLocaleString()}</p>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div>
@@ -804,6 +890,15 @@ const AdminPayments = () => {
                                                 <CheckCircle size={14} /> Paid
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button 
+                                                onClick={() => handlePrintVoucher(p)}
+                                                className="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl transition-all"
+                                                title="Print Receipt"
+                                            >
+                                                <Printer size={16} />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -811,7 +906,7 @@ const AdminPayments = () => {
                                 <tfoot>
                                     <tr className="bg-white/5 border-t-2 border-white/10">
                                         <td colSpan="3" className="px-6 py-6 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Grand Total ({filterMonth ? months.find(m => m.value === filterMonth).label : 'Selected Period'}):</td>
-                                        <td colSpan="3" className="px-6 py-6 text-2xl font-black text-emerald-400 font-mono">${totalIncome.toLocaleString()}</td>
+                                        <td colSpan="3" className="px-6 py-6 text-2xl font-black text-emerald-400 font-mono">৳{totalIncome.toLocaleString()}</td>
                                     </tr>
                                 </tfoot>
                             )}
