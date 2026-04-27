@@ -98,7 +98,7 @@ app.use('/api/timetable', require('./routes/timetableRoutes'));
 app.use('/api/bus-routes', require('./routes/busRouteRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
-
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
 
 // Start Cron Jobs
 const { markLateAssignments } = require('./cron/assignmentsCron');

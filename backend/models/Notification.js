@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema({
     message: { type: String, required: true },
     type: {
         type: String,
-        enum: ['notice', 'event', 'assignment', 'attendance', 'result', 'submission', 'graded', 'general'],
+        enum: ['notice', 'event', 'assignment', 'attendance', 'result', 'submission', 'graded', 'feedback', 'feedback_reply', 'general'],
         default: 'general'
     },
     relatedId: { type: mongoose.Schema.Types.ObjectId }, // ID of notice, event, etc.

@@ -59,6 +59,13 @@ export default function ClassroomView() {
    const [newMaterial, setNewMaterial] = useState({ title: '', type: 'pdf', url: '', description: '' });
    const [isSavingGrades, setIsSavingGrades] = useState(false);
    const [isSavingConfig, setIsSavingConfig] = useState(false);
+
+   // Feedback
+   const [feedbackList, setFeedbackList] = useState([]);
+   const [feedbackForm, setFeedbackForm] = useState({ studentId: '', participation: 'Good', behavior: 'Good', academicProgress: 'Good', teacherComment: '' });
+   const [parentReplyText, setParentReplyText] = useState('');
+   const [isCreatingFeedback, setIsCreatingFeedback] = useState(false);
+   const [replyingTo, setReplyingTo] = useState(null);
   useEffect(() => {
     const usr = JSON.parse(localStorage.getItem('user'));
     setUser(usr);
@@ -78,6 +85,7 @@ export default function ClassroomView() {
       }
       else if (activeTab === 'Attendance') fetchAttendanceData();
       else if (activeTab === 'Subjects' && selectedSubject) fetchSubjectData(selectedSubject._id);
+      else if (activeTab === 'Feedback') fetchFeedbackData();
       // 'Members' data is already part of the classroom object from the initial fetch
     } catch (err) {
       console.error(err);
@@ -363,6 +371,44 @@ export default function ClassroomView() {
      finally { setIsMarking(false); }
   };
 
+  // --- Feedback Logic ---
+  const fetchFeedbackData = async () => {
+    try {
+      const res = await api.get(`/feedback/classroom/${id}`);
+      setFeedbackList(res.data);
+    } catch (err) { console.error('Feedback fetch error:', err); }
+  };
+
+  const handleCreateFeedback = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/feedback', {
+        classroomId: id,
+        studentId: feedbackForm.studentId,
+        evaluation: {
+          participation: feedbackForm.participation,
+          behavior: feedbackForm.behavior,
+          academicProgress: feedbackForm.academicProgress
+        },
+        teacherComment: feedbackForm.teacherComment
+      });
+      setIsCreatingFeedback(false);
+      setFeedbackForm({ studentId: '', participation: 'Good', behavior: 'Good', academicProgress: 'Good', teacherComment: '' });
+      fetchFeedbackData();
+      alert('Feedback published successfully!');
+    } catch (err) { alert('Error publishing feedback'); }
+  };
+
+  const handleReplyFeedback = async (e, feedbackId) => {
+    e.preventDefault();
+    try {
+      await api.put(`/feedback/${feedbackId}/reply`, { parentComment: parentReplyText });
+      setReplyingTo(null);
+      setParentReplyText('');
+      fetchFeedbackData();
+    } catch (err) { alert('Error sending reply'); }
+  };
+
   if (!classroom) return <div className="text-white p-8">Loading...</div>;
 
   return (
@@ -379,7 +425,7 @@ export default function ClassroomView() {
       </div>
 
       <div className="flex border-b border-white/10 space-x-8 mb-6 overflow-x-auto">
-        {['Feed', 'Class Routine', 'Attendance', 'Subjects', 'Assignments', 'Results', 'Members']
+        {['Feed', 'Routine', 'Attendance', 'Subjects', 'Assignments', 'Results', 'Feedback', 'Members']
           .filter(tab => !(tab === 'Assignments' && user?.role === 'admin'))
           .map(tab => (
           <button
@@ -1631,6 +1677,137 @@ export default function ClassroomView() {
            </div>
         </div>
       )}
+
+      {/* FEEDBACK TAB */}
+      {activeTab === 'Feedback' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="glass-panel p-6 rounded-2xl border border-white/5 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-indigo-400"/> Parent-Teacher Feedback
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">Report-card style behavioral and academic feedback.</p>
+            </div>
+            {user?.role === 'teacher' && (
+              <button onClick={() => setIsCreatingFeedback(!isCreatingFeedback)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white text-sm font-bold transition-all shadow-lg shadow-indigo-500/20">
+                {isCreatingFeedback ? <X size={16} /> : <Plus size={16} />} {isCreatingFeedback ? 'Cancel' : 'New Report'}
+              </button>
+            )}
+          </div>
+
+          {isCreatingFeedback && user?.role === 'teacher' && (
+            <form onSubmit={handleCreateFeedback} className="glass-panel p-6 rounded-2xl border-t-4 border-t-indigo-500 space-y-4">
+              <h3 className="text-lg font-bold text-white mb-2">Create Progress Report</h3>
+              <select required value={feedbackForm.studentId} onChange={e => setFeedbackForm({...feedbackForm, studentId: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500">
+                <option value="">Select Student...</option>
+                {classroom.studentIds?.map(s => <option key={s._id} value={s._id}>{s.name} ({s.email})</option>)}
+              </select>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Participation</label>
+                  <select value={feedbackForm.participation} onChange={e => setFeedbackForm({...feedbackForm, participation: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500">
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Average">Average</option>
+                    <option value="Needs Improvement">Needs Improvement</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Behavior</label>
+                  <select value={feedbackForm.behavior} onChange={e => setFeedbackForm({...feedbackForm, behavior: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500">
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Average">Average</option>
+                    <option value="Needs Improvement">Needs Improvement</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Academic Progress</label>
+                  <select value={feedbackForm.academicProgress} onChange={e => setFeedbackForm({...feedbackForm, academicProgress: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500">
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Average">Average</option>
+                    <option value="Needs Improvement">Needs Improvement</option>
+                  </select>
+                </div>
+              </div>
+              
+              <textarea placeholder="Detailed Teacher's Comment..." required value={feedbackForm.teacherComment} onChange={e => setFeedbackForm({...feedbackForm, teacherComment: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 h-24" />
+              <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white font-bold transition-all shadow-lg shadow-indigo-500/20">
+                Publish Report to Guardian
+              </button>
+            </form>
+          )}
+
+          <div className="grid grid-cols-1 gap-6">
+            {feedbackList.map(fb => (
+              <div key={fb._id} className="glass-panel p-0 rounded-2xl overflow-hidden border border-white/10">
+                <div className="bg-indigo-500/10 p-4 border-b border-white/5 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-white font-bold flex items-center gap-2"><User size={16} className="text-indigo-400"/> {fb.student?.name}</h3>
+                    <p className="text-xs text-slate-400">Evaluated by: {fb.teacher?.name} on {new Date(fb.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  {fb.isAcknowledged ? (
+                    <span className="px-3 py-1 bg-green-500/20 text-green-400 text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-1">
+                      <CheckCircle size={12}/> Acknowledged
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-widest rounded-full">
+                      Pending Guardian Reply
+                    </span>
+                  )}
+                </div>
+                
+                <div className="p-6">
+                  <div className="grid grid-cols-3 gap-4 mb-6 text-center divide-x divide-white/5">
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Participation</p>
+                      <p className={`font-bold ${fb.evaluation.participation === 'Excellent' ? 'text-green-400' : fb.evaluation.participation === 'Needs Improvement' ? 'text-red-400' : 'text-blue-400'}`}>{fb.evaluation.participation}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Behavior</p>
+                      <p className={`font-bold ${fb.evaluation.behavior === 'Excellent' ? 'text-green-400' : fb.evaluation.behavior === 'Needs Improvement' ? 'text-red-400' : 'text-blue-400'}`}>{fb.evaluation.behavior}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Academic</p>
+                      <p className={`font-bold ${fb.evaluation.academicProgress === 'Excellent' ? 'text-green-400' : fb.evaluation.academicProgress === 'Needs Improvement' ? 'text-red-400' : 'text-blue-400'}`}>{fb.evaluation.academicProgress}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/20 p-4 rounded-xl border border-white/5 mb-6">
+                    <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-2 flex items-center gap-1"><MessageSquare size={12}/> Teacher's Comment</p>
+                    <p className="text-slate-300 text-sm italic">"{fb.teacherComment}"</p>
+                  </div>
+
+                  {fb.parentComment ? (
+                    <div className="bg-blue-500/5 p-4 rounded-xl border border-blue-500/10 ml-8">
+                      <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-2 flex items-center gap-1"><User size={12}/> Guardian's Reply</p>
+                      <p className="text-slate-300 text-sm">"{fb.parentComment}"</p>
+                    </div>
+                  ) : user?.role === 'student' ? (
+                    replyingTo === fb._id ? (
+                      <form onSubmit={(e) => handleReplyFeedback(e, fb._id)} className="ml-8 space-y-3">
+                        <textarea required placeholder="Write guardian's reply/acknowledgement..." value={parentReplyText} onChange={e => setParentReplyText(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-slate-200 text-sm outline-none focus:border-blue-500 h-20" />
+                        <div className="flex gap-2">
+                          <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-xs font-bold transition-colors">Acknowledge & Submit</button>
+                          <button type="button" onClick={() => setReplyingTo(null)} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 text-xs transition-colors">Cancel</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <button onClick={() => setReplyingTo(fb._id)} className="ml-8 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-xs font-bold transition-colors border border-blue-500/20">
+                        Add Guardian's Reply
+                      </button>
+                    )
+                  ) : null}
+                </div>
+              </div>
+            ))}
+            {feedbackList.length === 0 && <p className="text-slate-500 text-center py-10">No feedback reports available.</p>}
+          </div>
+        </div>
+      )}
+
       {/* ── Submit Assignment Modal ── */}
       {submitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
