@@ -83,7 +83,119 @@ const AdminAnalytics = () => {
     };
 
     const handlePrint = () => {
-        window.print();
+        if (!data) return;
+        const { summary, chartData } = data;
+        const cs = currentSummary;
+        const periodLabel = selectedMonth === 'all' ? `Full Year ${filterYear}` : `${selectedMonth} ${filterYear}`;
+
+        const monthRowsHtml = selectedMonth === 'all' ? chartData.map((m, i) => `
+            <tr style="border-bottom:1px solid #f0f0f0;background:${i%2===0?'#fff':'#fafafa'}">
+                <td style="padding:10px 12px;font-size:11px;font-weight:900;text-transform:uppercase;color:#333">${m.month}</td>
+                <td style="padding:10px 12px;font-size:11px;font-weight:700;font-family:monospace;color:#16a34a">৳${m.income.toLocaleString()}</td>
+                <td style="padding:10px 12px;font-size:11px;font-weight:700;font-family:monospace;color:#dc2626">৳${m.expense.toLocaleString()}</td>
+                <td style="padding:10px 12px;font-size:11px;font-weight:900;font-family:monospace;color:${(m.income-m.expense)>=0?'#111':'#dc2626'}">৳${(m.income-m.expense).toLocaleString()}</td>
+            </tr>
+        `).join('') : '';
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>EduConnect — Financial Audit (${periodLabel})</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#111;background:#fff;padding:40px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:4px solid #111;padding-bottom:24px;margin-bottom:32px}
+    .school-name{font-size:28px;font-weight:900;text-transform:uppercase;letter-spacing:-0.03em}
+    .report-title{font-size:14px;font-weight:600;color:#555;margin-top:4px}
+    .period{font-size:11px;color:#888;margin-top:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em}
+    .badge{background:#111;color:#fff;padding:8px 18px;font-weight:900;font-size:13px;letter-spacing:0.15em;text-transform:uppercase;border-radius:6px}
+    .meta{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:0.15em;font-weight:700;margin-top:6px;text-align:right}
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+    .kpi{border:2px solid #eee;border-radius:10px;padding:16px}
+    .kpi-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:#aaa;margin-bottom:8px}
+    .kpi-val{font-size:20px;font-weight:900;font-family:monospace;color:#111}
+    .total-box{background:#111;color:#fff;border-radius:10px;padding:20px;display:flex;flex-direction:column;justify-content:center;align-items:center;grid-column:span 2}
+    .total-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;opacity:0.5;margin-bottom:6px}
+    .total-amount{font-size:32px;font-weight:900;font-family:monospace}
+    .breakdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px}
+    .breakdown-box{border:2px solid #eee;border-radius:10px;padding:20px}
+    .section-title{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;border-left:5px solid #111;padding-left:12px;margin-bottom:16px;color:#111}
+    table{width:100%;border-collapse:collapse;border:2px solid #111;overflow:hidden}
+    thead tr{background:#f5f5f5;border-bottom:2px solid #111}
+    thead th{padding:12px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#444;text-align:left}
+    tfoot tr{background:#111;color:#fff}
+    tfoot td{padding:16px 12px;font-weight:900;font-family:monospace}
+    .signatures{display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:80px}
+    .sig-block{border-top:2px solid #111;padding-top:12px;text-align:center}
+    .sig-name{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em}
+    .sig-role{font-size:9px;color:#aaa;font-weight:700;text-transform:uppercase;margin-top:4px}
+    .footer-stamp{margin-top:60px;text-align:center}
+    .footer-stamp span{border:1px solid #ddd;border-radius:100px;padding:6px 20px;font-size:8px;color:#bbb;font-weight:900;text-transform:uppercase;letter-spacing:0.3em}
+    @media print{body{padding:20px}@page{margin:1.5cm}}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="school-name">EduConnect Academy</div>
+      <div class="report-title">Comprehensive Financial Audit Report</div>
+      <div class="period">Fiscal Period: ${periodLabel}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="badge">Internal Audit</div>
+      <div class="meta">Generated: ${new Date().toLocaleDateString()}</div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Active Students</div><div class="kpi-val">${summary.totalStudents}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Income</div><div class="kpi-val" style="color:#16a34a">৳${cs.income.toLocaleString()}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Expenses</div><div class="kpi-val" style="color:#dc2626">৳${cs.expense.toLocaleString()}</div></div>
+    <div class="kpi" style="background:#111;color:#fff;border-color:#111"><div class="kpi-label" style="color:rgba(255,255,255,0.4)">Net Profit</div><div class="kpi-val" style="color:#fff">৳${cs.profit.toLocaleString()}</div></div>
+  </div>
+
+  <div class="section-title">Financial Breakdown</div>
+  <table style="margin-bottom:32px">
+    <thead><tr><th>Category</th><th>Details</th><th style="text-align:right">Amount (BDT)</th></tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:12px;font-size:11px;font-weight:900;text-transform:uppercase">Gross Income</td>
+        <td style="padding:12px;font-size:11px;color:#666;font-style:italic">Revenue from admissions and registration fees.</td>
+        <td style="padding:12px;font-size:13px;font-weight:900;text-align:right;font-family:monospace;color:#16a34a">৳${cs.income.toLocaleString()}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:12px;font-size:11px;font-weight:900;text-transform:uppercase">Total Expenditures</td>
+        <td style="padding:12px;font-size:11px;color:#666;font-style:italic">Disbursements for salaries, maintenance, and supplies.</td>
+        <td style="padding:12px;font-size:13px;font-weight:900;text-align:right;font-family:monospace;color:#dc2626">৳${cs.expense.toLocaleString()}</td>
+      </tr>
+    </tbody>
+    <tfoot><tr>
+      <td colspan="2" style="text-align:right;font-size:10px;letter-spacing:0.2em;opacity:0.7">FINAL NET PROFIT:</td>
+      <td style="text-align:right;font-size:18px">৳${cs.profit.toLocaleString()}</td>
+    </tr></tfoot>
+  </table>
+
+  ${selectedMonth === 'all' ? `
+  <div class="section-title">Monthly Trends (${filterYear})</div>
+  <table>
+    <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net Profit/Loss</th></tr></thead>
+    <tbody>${monthRowsHtml}</tbody>
+  </table>` : ''}
+
+  <div class="signatures">
+    <div class="sig-block"><div class="sig-name">Finance Officer</div><div class="sig-role">Institutional Signature</div></div>
+    <div class="sig-block"><div class="sig-name">Board Secretary</div><div class="sig-role">Verification Stamp</div></div>
+  </div>
+  <div class="footer-stamp"><span>Official Audit Document • EduConnect Institutional Cloud</span></div>
+</body>
+</html>`;
+
+        const win = window.open('', '_blank', 'width=900,height=700');
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 500);
     };
 
     if (loading && !data) return (

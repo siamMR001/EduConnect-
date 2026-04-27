@@ -110,13 +110,9 @@ exports.getAiSummary = async (req, res) => {
         if (!forceRefresh) {
             const cached = await AiSummaryCache.findOne({ user: req.user._id });
             if (cached) {
-                // If cache is less than 1 hour old, return it
                 const ageInMs = new Date() - cached.createdAt;
                 if (ageInMs < 3600000) { // 1 hour
-                    return res.json({
-                        summary: cached.summary,
-                        cached: true
-                    });
+                    return res.json({ summary: cached.summary, cached: true });
                 }
             }
         }
@@ -127,8 +123,6 @@ exports.getAiSummary = async (req, res) => {
         }
 
         const context = await getUserContext(req.user._id);
-
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `
             You are a helpful AI Personal Assistant for a student named ${req.user.name || 'Student'} in a school management system called EduConnect. 
@@ -141,16 +135,30 @@ exports.getAiSummary = async (req, res) => {
             IMPORTANT: Speak directly to the student.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
+        // Try models in order — most capable to most available
+        const modelNames = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
+        let text = null;
+        let lastError = null;
 
-        if (!response) {
-            throw new Error('No response from AI service');
+        for (const modelName of modelNames) {
+            try {
+                logToFile(`Trying model: ${modelName}`);
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                if (response && response.text()) {
+                    text = response.text();
+                    logToFile(`Success with model: ${modelName}`);
+                    break;
+                }
+            } catch (modelErr) {
+                logToFile(`Model ${modelName} failed:`, modelErr.message);
+                lastError = modelErr;
+            }
         }
 
-        const text = response.text();
         if (!text) {
-            throw new Error('Empty response from AI service');
+            throw lastError || new Error('All AI models failed to respond.');
         }
 
         // Update cache
@@ -160,11 +168,8 @@ exports.getAiSummary = async (req, res) => {
             { upsert: true, new: true }
         );
 
-        res.json({
-            summary: text,
-            context: context,
-            cached: false
-        });
+        res.json({ summary: text, context: context, cached: false });
+
     } catch (error) {
         logToFile('AI Summary Error:', error.message);
         logToFile('AI Summary Error Stack:', error.stack);

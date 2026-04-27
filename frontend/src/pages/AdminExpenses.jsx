@@ -136,7 +136,356 @@ const AdminExpenses = () => {
     };
 
     const handlePrint = () => {
-        window.print();
+        const periodLabel = filterMonth
+            ? `${months.find(m => m.value === filterMonth)?.label} ${filterYear}`
+            : `Full Year ${filterYear}`;
+
+        const rowsHtml = filteredExpenses.map((e, i) => `
+            <tr>
+                <td>${new Date(e.date).toLocaleDateString()}</td>
+                <td class="mono">${e.voucherNo}</td>
+                <td>
+                    <div class="name">${e.recipientName}</div>
+                    <div class="sub-id">ID: ${e.recipientId}</div>
+                </td>
+                <td class="purpose">${e.purpose}</td>
+                <td>${e.paymentMethod}</td>
+                <td class="amount-cell">৳${e.amount.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>EduConnect — Expense Report (${periodLabel})</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #000;
+      background: #fff;
+      padding: 48px;
+      font-size: 13px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 4px solid #000;
+      padding-bottom: 28px;
+      margin-bottom: 32px;
+    }
+    .school-name {
+      font-size: 32px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .report-subtitle { font-size: 15px; font-weight: 600; color: #444; margin-top: 6px; }
+    .report-period { font-size: 11px; color: #888; margin-top: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
+    .badge-wrap { text-align: right; }
+    .expense-badge {
+      display: inline-block;
+      background: #111;
+      color: #fff;
+      padding: 10px 22px;
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: 8px;
+    }
+    .generated {
+      font-size: 9px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    /* ── SUMMARY ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+    .summary-box {
+      border: 2px solid #000;
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .summary-box-title {
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      color: #aaa;
+      margin-bottom: 16px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 11px;
+    }
+    .summary-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .summary-row .label { color: #666; font-weight: 600; }
+    .summary-row .val { font-weight: 900; color: #000; }
+    .total-box {
+      background: #000;
+      color: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .total-box-label {
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      opacity: 0.5;
+      margin-bottom: 10px;
+    }
+    .total-amount {
+      font-size: 44px;
+      font-weight: 900;
+      font-family: 'Courier New', monospace;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── TABLE ── */
+    .section-label {
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-left: 6px solid #000;
+      padding-left: 12px;
+      margin-bottom: 16px;
+      color: #000;
+    }
+    table { width: 100%; border-collapse: collapse; border: 2px solid #000; }
+    thead tr { background: #f5f5f5; border-bottom: 2px solid #000; }
+    thead th {
+      padding: 14px 12px;
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #444;
+      text-align: left;
+    }
+    tbody tr { border-bottom: 1px solid #ebebeb; }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    tbody td { padding: 12px; font-size: 11px; vertical-align: middle; }
+    .name { font-size: 12px; font-weight: 800; text-transform: uppercase; color: #000; }
+    .sub-id { font-size: 10px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+    .purpose { font-size: 11px; font-weight: 600; color: #444; font-style: italic; }
+    .mono { font-family: 'Courier New', monospace; font-size: 10px; color: #777; }
+    .amount-cell { font-size: 13px; font-weight: 900; text-align: right; font-family: 'Courier New', monospace; color: #000; }
+    tfoot tr { background: #000; color: #fff; }
+    tfoot td { padding: 18px 12px; font-weight: 900; font-family: 'Courier New', monospace; }
+    .tfoot-label { text-align: right; font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.6; font-family: 'Segoe UI', Arial, sans-serif; }
+    .tfoot-amount { text-align: right; font-size: 20px; }
+
+    /* ── SIGNATURES ── */
+    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; margin-top: 80px; }
+    .sig-block { border-top: 2px solid #000; padding-top: 12px; text-align: center; }
+    .sig-name { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.12em; }
+    .sig-role { font-size: 9px; color: #aaa; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 4px; }
+
+    /* ── FOOTER ── */
+    .footer-stamp { margin-top: 60px; text-align: center; }
+    .footer-stamp span {
+      border: 1px solid #ddd;
+      border-radius: 100px;
+      padding: 7px 24px;
+      font-size: 8px;
+      color: #bbb;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.35em;
+    }
+
+    @media print {
+      body { padding: 20px; }
+      @page { margin: 1.5cm; size: A4; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <div class="school-name">EduConnect Academy</div>
+      <div class="report-subtitle">Official Expenditure Report</div>
+      <div class="report-period">Report for: ${periodLabel}</div>
+    </div>
+    <div class="badge-wrap">
+      <div class="expense-badge">Expense Voucher</div>
+      <div class="generated">Generated: ${new Date().toLocaleString()}</div>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-box">
+      <div class="summary-box-title">Disbursement Summary</div>
+      <div class="summary-row"><span class="label">Total Vouchers:</span><span class="val">${filteredExpenses.length} Records</span></div>
+      <div class="summary-row"><span class="label">Applied Filter:</span><span class="val">${periodLabel}</span></div>
+      <div class="summary-row"><span class="label">Report Type:</span><span class="val">Institutional Expenditure</span></div>
+    </div>
+    <div class="total-box">
+      <div class="total-box-label">Total Amount</div>
+      <div class="total-amount">৳${totalFilteredAmount.toLocaleString()}</div>
+    </div>
+  </div>
+
+  <div class="section-label">Expenditure Ledger</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Voucher No.</th>
+        <th>Recipient</th>
+        <th>Purpose</th>
+        <th>Method</th>
+        <th style="text-align:right">Amount</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5" class="tfoot-label">Total Expenditure for the Period:</td>
+        <td class="tfoot-amount">৳${totalFilteredAmount.toLocaleString()}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="sig-name">Finance Director</div>
+      <div class="sig-role">Authorized Signature &amp; Seal</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-name">Head of Academy</div>
+      <div class="sig-role">Verification &amp; Audit Stamp</div>
+    </div>
+  </div>
+
+  <div class="footer-stamp">
+    <span>Official Expense Voucher &bull; EduConnect Institutional Cloud &bull; Encrypted Transaction Log</span>
+  </div>
+
+</body>
+</html>`;
+
+        const win = window.open('', '_blank', 'width=950,height=750');
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 600);
+    };
+
+    const handlePrintVoucher = (exp) => {
+        if (!exp) return;
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Payment Voucher — ${exp.voucherNo}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; background: #fff; padding: 48px; }
+    .voucher { border: 2px solid #0f172a; padding: 40px; position: relative; }
+    .v-header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 28px; }
+    .v-school { font-size: 26px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.04em; }
+    .v-subtitle { font-size: 13px; color: #555; margin-top: 4px; font-weight: 600; }
+    .v-sys { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 0.25em; font-weight: 700; margin-top: 6px; }
+    .v-meta { display: flex; justify-content: space-between; margin-bottom: 24px; font-size: 11px; }
+    .v-meta-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #888; display: block; margin-bottom: 2px; }
+    .v-meta-val { font-weight: 900; color: #0f172a; font-family: 'Courier New', monospace; }
+    .v-recipient { background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px 20px; margin-bottom: 24px; display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+    .v-field-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #888; margin-bottom: 4px; }
+    .v-field-val { font-size: 17px; font-weight: 900; color: #0f172a; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    thead tr { border-bottom: 2px solid #0f172a; }
+    thead th { padding: 10px 0; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #555; text-align: left; }
+    thead th:last-child { text-align: right; }
+    tbody tr { border-bottom: 1px solid #e2e8f0; }
+    tbody td { padding: 14px 0; vertical-align: top; }
+    tbody td:last-child { text-align: right; font-size: 20px; font-weight: 900; font-family: 'Courier New', monospace; }
+    .purpose-title { font-size: 15px; font-weight: 900; }
+    .purpose-desc { font-size: 11px; color: #64748b; margin-top: 4px; }
+    tfoot td { padding: 10px 0; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #555; text-align: right; }
+    tfoot td:last-child { font-size: 24px; color: #0f172a; font-family: 'Courier New', monospace; }
+    .v-words { border-left: 4px solid #0f172a; background: #f8fafc; padding: 10px 16px; margin-bottom: 60px; }
+    .v-words-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #888; margin-bottom: 4px; }
+    .v-words-val { font-size: 12px; font-style: italic; font-weight: 800; }
+    .v-sigs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; margin-top: 60px; }
+    .v-sig { border-top: 1px solid #0f172a; padding-top: 10px; text-align: center; }
+    .v-sig-name { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; color: #555; }
+    .v-sig-sub { font-size: 8px; color: #aaa; margin-top: 3px; }
+    .v-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-25deg); font-size: 100px; font-weight: 900; text-transform: uppercase; color: rgba(0,0,0,0.03); pointer-events: none; white-space: nowrap; }
+    @media print { body { padding: 10px; } @page { margin: 1cm; size: A4; } }
+  </style>
+</head>
+<body>
+  <div class="voucher">
+    <div class="v-watermark">PAID</div>
+    <div class="v-header">
+      <div class="v-school">EduConnect Academy</div>
+      <div class="v-subtitle">Official Payment Voucher &amp; Receipt</div>
+      <div class="v-sys">Professional School Management System</div>
+    </div>
+    <div class="v-meta">
+      <div><span class="v-meta-label">Voucher No.</span><span class="v-meta-val">${exp.voucherNo}</span></div>
+      <div><span class="v-meta-label">Date</span><span class="v-meta-val">${new Date(exp.date).toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}</span></div>
+      <div style="text-align:right"><span class="v-meta-label">Payment Method</span><span class="v-meta-val">${exp.paymentMethod}</span></div>
+    </div>
+    <div class="v-recipient">
+      <div><div class="v-field-label">Paid To (Recipient Name)</div><div class="v-field-val">${exp.recipientName}</div></div>
+      <div><div class="v-field-label">Recipient ID</div><div class="v-field-val">${exp.recipientId}</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Description of Payment</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><div class="purpose-title">${exp.purpose}</div><div class="purpose-desc">${exp.description || 'Official disbursement for school operations.'}</div></td>
+          <td>৳${exp.amount.toFixed(2)}</td>
+        </tr>
+      </tbody>
+      <tfoot><tr><td>Total Amount</td><td>৳${exp.amount.toFixed(2)}</td></tr></tfoot>
+    </table>
+    <div class="v-words">
+      <div class="v-words-label">Amount in Words</div>
+      <div class="v-words-val">"${exp.amount.toLocaleString()} Taka Only"</div>
+    </div>
+    <div class="v-sigs">
+      <div class="v-sig"><div class="v-sig-name">Recipient's Signature</div><div class="v-sig-sub">(Sign upon receiving payment)</div></div>
+      <div class="v-sig"><div class="v-sig-name">Accountant / Admin</div></div>
+      <div class="v-sig"><div class="v-sig-name">Authorized Official</div></div>
+    </div>
+  </div>
+</body>
+</html>`;
+        const win = window.open('', '_blank', 'width=800,height=650');
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 500);
     };
 
     const resetFilters = () => {
@@ -481,7 +830,7 @@ const AdminExpenses = () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <button
-                                    onClick={handlePrint}
+                                    onClick={() => handlePrintVoucher(selectedExpense)}
                                     className="btn-primary py-1.5 px-4 flex items-center gap-2 text-sm"
                                 >
                                     <Printer size={16} /> Print Slip

@@ -95,8 +95,294 @@ const AdminPayments = () => {
     };
 
     const handlePrint = () => {
-        window.print();
+        const periodLabel = filterMonth
+            ? `${months.find(m => m.value === filterMonth)?.label} ${filterYear}`
+            : `Full Year ${filterYear}`;
+
+        const rowsHtml = filteredHistory.map((p, i) => `
+            <tr>
+                <td>${new Date(p.date).toLocaleDateString()}</td>
+                <td>
+                    <div class="student-name">${p.studentName}</div>
+                    <div class="student-id">ID: ${p.studentId}</div>
+                </td>
+                <td>${p.type}</td>
+                <td>${p.method}</td>
+                <td class="mono">${p.transactionId || '—'}</td>
+                <td class="amount-cell">৳${p.amount.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        const admissionRev = filteredHistory.filter(p => p.type === 'Admission Fee').reduce((s, p) => s + p.amount, 0);
+        const registrationRev = filteredHistory.filter(p => p.type === 'Registration Fee').reduce((s, p) => s + p.amount, 0);
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>EduConnect — Income Audit Report</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #000;
+      background: #fff;
+      padding: 48px;
+      font-size: 13px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 4px solid #000;
+      padding-bottom: 28px;
+      margin-bottom: 32px;
+    }
+    .school-name {
+      font-size: 32px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .report-subtitle { font-size: 15px; font-weight: 600; color: #444; margin-top: 6px; }
+    .report-period { font-size: 11px; color: #888; margin-top: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
+    .badge-wrap { text-align: right; }
+    .audit-badge {
+      display: inline-block;
+      background: #000;
+      color: #fff;
+      padding: 10px 22px;
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: 8px;
+    }
+    .generated {
+      font-size: 9px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    /* ── SUMMARY GRID ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+    .summary-box {
+      border: 2px solid #000;
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .summary-box-title {
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      color: #aaa;
+      margin-bottom: 16px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 11px;
+    }
+    .summary-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .summary-row .label { color: #666; font-weight: 600; }
+    .summary-row .val { font-weight: 900; color: #000; }
+    .total-box {
+      background: #000;
+      color: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .total-box-label {
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      opacity: 0.5;
+      margin-bottom: 10px;
+    }
+    .total-amount {
+      font-size: 44px;
+      font-weight: 900;
+      font-family: 'Courier New', monospace;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── TABLE ── */
+    .section-label {
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-left: 6px solid #000;
+      padding-left: 12px;
+      margin-bottom: 16px;
+      color: #000;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 2px solid #000;
+    }
+    thead tr { background: #f5f5f5; border-bottom: 2px solid #000; }
+    thead th {
+      padding: 14px 12px;
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #444;
+      text-align: left;
+    }
+    tbody tr { border-bottom: 1px solid #ebebeb; }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    tbody td { padding: 12px; font-size: 11px; vertical-align: middle; }
+    .student-name { font-size: 12px; font-weight: 800; text-transform: uppercase; color: #000; }
+    .student-id { font-size: 10px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+    .mono { font-family: 'Courier New', monospace; font-size: 10px; color: #777; }
+    .amount-cell { font-size: 13px; font-weight: 900; text-align: right; font-family: 'Courier New', monospace; color: #000; }
+    tfoot tr { background: #000; color: #fff; }
+    tfoot td {
+      padding: 18px 12px;
+      font-weight: 900;
+      font-family: 'Courier New', monospace;
+    }
+    .tfoot-label {
+      text-align: right;
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      opacity: 0.6;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    .tfoot-amount { text-align: right; font-size: 20px; }
+
+    /* ── SIGNATURES ── */
+    .signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      margin-top: 80px;
+    }
+    .sig-block { border-top: 2px solid #000; padding-top: 12px; text-align: center; }
+    .sig-name { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.12em; }
+    .sig-role { font-size: 9px; color: #aaa; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 4px; }
+
+    /* ── FOOTER ── */
+    .footer-stamp { margin-top: 60px; text-align: center; }
+    .footer-stamp span {
+      border: 1px solid #ddd;
+      border-radius: 100px;
+      padding: 7px 24px;
+      font-size: 8px;
+      color: #bbb;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.35em;
+    }
+
+    @media print {
+      body { padding: 20px; }
+      @page { margin: 1.5cm; size: A4; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <div class="school-name">EduConnect Academy</div>
+      <div class="report-subtitle">Financial Income Audit Report</div>
+      <div class="report-period">Report for: ${periodLabel}</div>
+    </div>
+    <div class="badge-wrap">
+      <div class="audit-badge">Audit Document</div>
+      <div class="generated">Generated: ${new Date().toLocaleString()}</div>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-box">
+      <div class="summary-box-title">Transaction Summary</div>
+      <div class="summary-row"><span class="label">Total Count:</span><span class="val">${filteredHistory.length} Transactions</span></div>
+      <div class="summary-row"><span class="label">Admission Revenue:</span><span class="val">৳${admissionRev.toLocaleString()}</span></div>
+      <div class="summary-row"><span class="label">Registration Revenue:</span><span class="val">৳${registrationRev.toLocaleString()}</span></div>
+      <div class="summary-row"><span class="label">Applied Filter:</span><span class="val">${periodLabel}</span></div>
+    </div>
+    <div class="total-box">
+      <div class="total-box-label">Total Verified Revenue</div>
+      <div class="total-amount">৳${totalIncome.toLocaleString()}</div>
+    </div>
+  </div>
+
+  <div class="section-label">Transaction Ledger</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Source / Student ID</th>
+        <th>Type</th>
+        <th>Method</th>
+        <th>Transaction ID</th>
+        <th style="text-align:right">Amount</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5" class="tfoot-label">Total Net Revenue for the Period:</td>
+        <td class="tfoot-amount">৳${totalIncome.toLocaleString()}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="sig-name">Finance Director</div>
+      <div class="sig-role">Authorized Signature &amp; Seal</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-name">Head of Academy</div>
+      <div class="sig-role">Verification &amp; Audit Stamp</div>
+    </div>
+  </div>
+
+  <div class="footer-stamp">
+    <span>Official Audit Document &bull; EduConnect Institutional Cloud &bull; Encrypted Transaction Log</span>
+  </div>
+
+</body>
+</html>`;
+
+        const win = window.open('', '_blank', 'width=950,height=750');
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 600);
     };
+
 
     const resetFilters = () => {
         setSearchTerm('');

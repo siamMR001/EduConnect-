@@ -66,9 +66,9 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
   return (
     <>
       {/* Mobile Overlay */}
-      {isOpen && (
+      {!isOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-md animate-fade-in" 
+          className="fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-md animate-fade-in no-print print:hidden" 
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -81,6 +81,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
         flex flex-col overflow-y-auto overflow-x-hidden
         ${isOpen ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'}
         shadow-[20px_0_50px_-20px_rgba(0,0,0,0.5)]
+        no-print print:hidden
       `}>
         {/* Sidebar Header for Mobile */}
         <div className="lg:hidden flex items-center justify-between p-6 border-b border-white/5 mb-4">
@@ -197,7 +198,7 @@ function App() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary-dark/10 blur-[120px] rounded-full pointer-events-none animate-pulse" />
 
       {isLoggedIn && (
-        <nav className="bg-[#0f172a]/80 backdrop-blur-2xl border-b border-white/5 sticky top-0 z-[100] h-[73px] flex items-center">
+        <nav className="bg-[#0f172a]/80 backdrop-blur-2xl border-b border-white/5 sticky top-0 z-[100] h-[73px] flex items-center no-print print:hidden">
           <div className="w-full max-w-screen-2xl mx-auto px-6 flex items-center justify-between">
             <div className="flex items-center gap-6">
               {user?.role === 'admin' && (
@@ -274,7 +275,7 @@ function App() {
 
       <div className="flex flex-1 relative z-10">
         {isLoggedIn && <Sidebar user={user} isOpen={isSidebarCollapsed} setIsOpen={setIsSidebarCollapsed} />}
-        <main className="flex-1 p-4 sm:p-8 relative overflow-x-hidden transition-all duration-500">
+        <main className="flex-1 p-4 sm:p-8 relative overflow-x-hidden transition-all duration-500 print:p-0 print:m-0 print:overflow-visible">
           <Routes>
             <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login />} />
             <Route path="/dashboard" element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" replace />} />
@@ -303,7 +304,7 @@ function App() {
         </main>
       </div>
 
-      <footer className="w-full py-8 px-6 border-t border-white/5 bg-[#0f172a]/80 backdrop-blur-md relative z-20">
+      <footer className="w-full py-8 px-6 border-t border-white/5 bg-[#0f172a]/80 backdrop-blur-md relative z-20 no-print print:hidden">
          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
                <div className="w-1.5 h-6 bg-primary rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>

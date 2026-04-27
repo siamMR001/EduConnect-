@@ -116,11 +116,25 @@
 .scroll-panel:hover::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.22);
 }
-/* Print Styles for Routine Export */
+
+/* Hardened Print Styles for Multi-page flow */
 @media print {
-  body {
+  @page {
+    margin: 1.5cm;
+    size: auto;
+  }
+
+  html, body {
     background: white !important;
     color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    -webkit-print-color-adjust: exact !important;
   }
   
   .no-print, 
@@ -128,31 +142,69 @@
   header, 
   footer, 
   button,
+  aside,
   .sidebar,
   .print-hidden,
   .ai-assistant-container {
     display: none !important;
   }
 
+  /* Force all nested containers to be block and visible */
+  div, main, section, article {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    float: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .flex, .grid {
+    display: block !important;
+  }
+
   .glass-panel {
     background: white !important;
-    border: 1px solid #ddd !important;
+    border: 1px solid #eee !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    padding: 20px !important;
+    margin: 0 0 20px 0 !important;
+    page-break-inside: avoid !important;
+    border-radius: 8px !important;
+    width: 100% !important;
   }
 
   table {
     width: 100% !important;
     border-collapse: collapse !important;
     color: black !important;
+    table-layout: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
   }
 
   th, td {
-    border: 1px solid #ddd !important;
+    border: 1px solid #eee !important;
     color: black !important;
     background: white !important;
+    padding: 12px 8px !important;
+    word-break: break-word !important;
+    text-align: left !important;
   }
 
   .text-white, .text-slate-200, .text-slate-300, .text-slate-400, .text-slate-500 {
@@ -160,30 +212,21 @@
   }
 
   .bg-primary, .bg-blue-500, .bg-indigo-500, .bg-primary/20, .bg-blue-500/10, .bg-indigo-500/10 {
-    background-color: #f3f4f6 !important;
-    border: 1px solid #ccc !important;
-  }
-
-  .bg-black/20, .bg-white/5, .bg-white/[0.02], .bg-white/[0.01], .bg-black/30 {
-    background: transparent !important;
+    background-color: transparent !important;
+    border: 1px solid #eee !important;
+    color: black !important;
   }
 
   h1, h2, h3, h4 {
     color: black !important;
-    margin-top: 0 !important;
+    margin: 1.5rem 0 1rem 0 !important;
+    page-break-after: avoid !important;
+    font-weight: 800 !important;
   }
 
-  div {
-    box-shadow: none !important;
-    border-radius: 0 !important;
-  }
-
-  .overflow-x-auto {
-    overflow: visible !important;
-  }
-
-  .max-w-5xl {
+  .max-w-5xl, .max-w-7xl, .max-w-screen-2xl {
     max-width: 100% !important;
+    width: 100% !important;
   }
 }
 
@@ -213,5 +256,3 @@
     transform: translateX(0);
   }
 }
-
-/* Custom Scrollbar */
