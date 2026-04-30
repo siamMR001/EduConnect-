@@ -22,12 +22,12 @@ const Login = () => {
 
         // Prevent standard registration for Teachers and enforce the wizard routing
         if (!isLoginMode && activeTab === 'teacher') {
-            navigate('/teacher-registration', { 
-                state: { 
-                    prefillEmployeeId: formData.name, 
-                    prefillEmail: formData.email, 
-                    prefillPassword: formData.password 
-                } 
+            navigate('/teacher-registration', {
+                state: {
+                    prefillEmployeeId: formData.name,
+                    prefillEmail: formData.email,
+                    prefillPassword: formData.password
+                }
             });
             return;
         }
@@ -51,6 +51,18 @@ const Login = () => {
             if (response.ok) {
                 // For student registration, we might need to trigger payment
                 if (!isLoginMode && activeTab === 'student') {
+                    // Check if student already paid during admission
+                    if (data.paymentStatus === 'paid' || data.paymentStatus === 'pending_verification') {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('user', JSON.stringify(data));
+                        if (rememberMe) {
+                            localStorage.setItem('rememberedEmail', formData.email);
+                        }
+                        navigate('/dashboard');
+                        setIsLoading(false);
+                        return;
+                    }
+
                     setFormData(prev => ({ ...prev, studentId: data.studentId }));
                     setIsPaymentModalOpen(true);
                     setIsLoading(false);
@@ -73,7 +85,7 @@ const Login = () => {
         } catch (err) {
             setError('Network error. Please try again.');
         } finally {
-            if (!( !isLoginMode && activeTab === 'student' && response?.ok )) {
+            if (!(!isLoginMode && activeTab === 'student' && response?.ok)) {
                 setIsLoading(false);
             }
         }
@@ -96,6 +108,8 @@ const Login = () => {
                     <span>Admission Portal</span>
                 </button>
             </div>
+
+
 
             <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center pb-20">
                 <div className="text-center mb-8 animate-fade-in-down">
@@ -235,7 +249,7 @@ const Login = () => {
                 </p>
             </div>
 
-            <PaymentModal 
+            <PaymentModal
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}
                 studentId={formData.studentId}

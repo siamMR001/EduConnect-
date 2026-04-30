@@ -744,7 +744,7 @@ export default function ClassroomView() {
       )}
 
       {/* CLASS ROUTINE TAB */}
-      {activeTab === 'Class Routine' && (
+      {activeTab === 'Routine' && (
         <div className="space-y-6 animate-fade-in-up">
           <div className="flex justify-end no-print">
             <button 

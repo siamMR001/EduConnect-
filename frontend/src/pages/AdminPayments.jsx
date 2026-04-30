@@ -794,7 +794,7 @@ const AdminPayments = () => {
                                             <td className="px-6 py-4">
                                                 <span className="px-2 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-lg uppercase">{config.paymentType}</span>
                                             </td>
-                                            <td className="px-6 py-4 font-mono font-bold text-emerald-400">${config.amount}</td>
+                                            <td className="px-6 py-4 font-mono font-bold text-emerald-400">৳{config.amount}</td>
                                             <td className="px-6 py-4 text-xs text-slate-400">{config.month} {config.academicYear}</td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
@@ -948,7 +948,7 @@ const AdminPayments = () => {
                     </div>
                     <div className="bg-black text-white p-6 rounded-2xl flex flex-col justify-center items-center shadow-xl">
                         <h3 className="text-xs font-black uppercase mb-2 opacity-50 tracking-widest">Total Verified Revenue</h3>
-                        <div className="text-5xl font-black font-mono">${totalIncome.toLocaleString()}</div>
+                        <div className="text-5xl font-black font-mono">৳{totalIncome.toLocaleString()}</div>
                     </div>
                 </div>
 
@@ -974,14 +974,14 @@ const AdminPayments = () => {
                                 <td className="p-4 text-[10px] font-black uppercase tracking-tighter">{p.type}</td>
                                 <td className="p-4 text-[10px] font-black uppercase">{p.method}</td>
                                 <td className="p-4 text-[10px] font-mono font-bold text-gray-600">{p.transactionId}</td>
-                                <td className="p-4 text-sm font-black text-right font-mono">${(p.amount || 0).toLocaleString()}</td>
+                                <td className="p-4 text-sm font-black text-right font-mono">৳{(p.amount || 0).toLocaleString()}</td>
                             </tr>
                         ))}
                     </tbody>
                     <tfoot>
                         <tr className="bg-black text-white font-black">
                             <td colSpan="5" className="p-6 text-right uppercase tracking-[0.3em] text-xs">Total Net Revenue for the Period:</td>
-                            <td className="p-6 text-2xl text-right font-mono italic">${totalIncome.toLocaleString()}</td>
+                            <td className="p-6 text-2xl text-right font-mono italic">৳{totalIncome.toLocaleString()}</td>
                         </tr>
                     </tfoot>
                 </table>

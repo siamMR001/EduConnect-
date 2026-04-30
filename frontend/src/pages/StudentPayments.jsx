@@ -213,7 +213,7 @@ const StudentPayments = () => {
                                         <div className="flex items-center gap-8 text-right">
                                             <div className="hidden sm:block">
                                                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Due Amount</p>
-                                                <p className="text-xl font-black text-emerald-400 font-mono">${p.amount}</p>
+                                                <p className="text-xl font-black text-emerald-400 font-mono">৳{p.amount}</p>
                                             </div>
                                             {expandedId === p._id ? <ChevronUp className="text-slate-500" /> : <ChevronDown className="text-slate-500" />}
                                         </div>
@@ -235,7 +235,7 @@ const StudentPayments = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col items-end justify-center">
-                                                    <p className="text-3xl font-black text-white mb-2 font-mono">${p.amount}</p>
+                                                    <p className="text-3xl font-black text-white mb-2 font-mono">৳{p.amount}</p>
                                                     <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Fixed Institutional Rate</p>
                                                 </div>
                                             </div>
@@ -273,7 +273,7 @@ const StudentPayments = () => {
                             </div>
                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-tighter mb-1">Total Paid to Date</p>
                             <p className="text-5xl font-black text-white tracking-tighter font-mono">
-                                ${payments.filter(p => p.status === 'Paid').reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}
+                                ৳{payments.filter(p => p.status === 'Paid').reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}
                             </p>
                         </div>
                         <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-white/[0.03] rounded-full group-hover:scale-150 transition-transform duration-700"></div>
@@ -300,7 +300,7 @@ const StudentPayments = () => {
                                                     <p className="text-[9px] text-slate-500 font-bold uppercase">{p.month} {p.year}</p>
                                                 </td>
                                                 <td className="px-6 py-4 font-mono font-bold text-xs text-slate-300">
-                                                    ${p.amount}
+                                                    ৳{p.amount}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${p.status === 'Paid' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>

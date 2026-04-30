@@ -115,6 +115,8 @@ export default function NotificationsPanel() {
                 )}
             </button>
 
+
+
             {/* Notification Panel */}
             {showPanel && (
                 <div className="absolute right-0 top-12 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
@@ -230,11 +232,10 @@ export default function NotificationsPanel() {
                                 <button
                                     key={page}
                                     onClick={() => fetchNotifications(page)}
-                                    className={`px-2 py-1 rounded transition ${
-                                        currentPage === page
+                                    className={`px-2 py-1 rounded transition ${currentPage === page
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    }`}
+                                        }`}
                                 >
                                     {page}
                                 </button>

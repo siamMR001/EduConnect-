@@ -24,7 +24,10 @@ exports.registerUser = async (req, res) => {
             }
 
             // Check if profile exists (meaning it was shifted by admin approval)
-            existingProfile = await StudentProfile.findOne({ studentId });
+            const cleanId = studentId.toString().trim();
+            existingProfile = await StudentProfile.findOne({ 
+                studentId: { $regex: new RegExp(`^${cleanId}$`, 'i') } 
+            });
             if (!existingProfile) {
                 return res.status(400).json({ message: 'No approved admission found for this Student ID. Please ensure your admission is approved.' });
             }

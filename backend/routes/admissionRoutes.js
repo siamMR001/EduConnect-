@@ -6,6 +6,33 @@ const Admission = require('../models/Admission');
 const User = require('../models/User');
 const StudentProfile = require('../models/StudentProfile');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const sendEmail = require('../utils/emailService');
+
+const sendPaymentSuccessEmail = async (admission) => {
+    const email = admission.guardianEmail || admission.fatherEmail || admission.motherEmail;
+    if (!email) return;
+
+    const message = `Dear Parent/Guardian,
+
+Congratulations! Your admission payment for ${admission.firstName} ${admission.lastName} has been successfully received.
+
+Below are the details for your records:
+Student Name: ${admission.firstName} ${admission.lastName}
+Student ID: ${admission.studentId}
+Amount Paid: ৳${admission.amount}
+Payment Method: ${admission.paymentMethod}
+
+You can now use the Student ID above to register for a student account on our portal.
+
+Best regards,
+EduConnect Administration`;
+
+    await sendEmail({
+        email: email,
+        subject: 'Admission Payment Successful - EduConnect',
+        message: message
+    });
+};
 
 // Configure Multer storage
 const storage = multer.diskStorage({
@@ -106,6 +133,11 @@ router.post('/', function (req, res, next) {
 
         const newAdmission = await Admission.create(admissionData);
 
+        // Send confirmation email if paid immediately (Stripe Mock, etc.)
+        if (newAdmission.paymentStatus === 'paid') {
+            await sendPaymentSuccessEmail(newAdmission);
+        }
+
         res.status(201).json({
             message: 'Application submitted successfully',
             studentId: newAdmission.studentId,
@@ -150,7 +182,7 @@ const shiftToStudentProfile = async (application) => {
         const gender = validGenders.includes(appObj.gender) ? appObj.gender : 'Other';
 
         try {
-            await StudentProfile.create({
+            const newProfile = await StudentProfile.create({
                 studentId: studentId,
                 firstName: appObj.firstName || 'Student',
                 lastName: appObj.lastName || 'Profile',
@@ -166,26 +198,26 @@ const shiftToStudentProfile = async (application) => {
                 section: 'A',
                 previousSchool: appObj.previousSchool,
                 previousResultSheet: appObj.previousResultSheet,
-
+                
                 fatherName: appObj.fatherName,
                 fatherPhone: appObj.fatherPhone,
                 fatherEmail: appObj.fatherEmail,
                 fatherOccupation: appObj.fatherOccupation,
                 fatherPhoto: appObj.fatherPhoto,
-
+                
                 motherName: appObj.motherName,
                 motherPhone: appObj.motherPhone,
                 motherEmail: appObj.motherEmail,
                 motherOccupation: appObj.motherOccupation,
                 motherPhoto: appObj.motherPhoto,
-
+                
                 guardianName: appObj.guardianName || appObj.fatherName || 'Guardian',
                 guardianPhone: appObj.guardianPhone || appObj.fatherPhone || 'N/A',
                 guardianEmail: appObj.guardianEmail || appObj.fatherEmail || '',
                 guardianRelation: appObj.guardianRelation,
                 guardianOccupation: appObj.guardianOccupation,
                 guardianPhoto: appObj.guardianPhoto,
-
+                
                 address: appObj.presentAddress?.details || 'N/A',
                 presentAddress: {
                     district: appObj.presentAddress?.district,
@@ -203,14 +235,16 @@ const shiftToStudentProfile = async (application) => {
                 },
                 
                 documentsPdf: appObj.documentsPdf,
-
+                
                 status: 'active',
-                registrationPaymentStatus: appObj.paymentStatus === 'paid' ? 'paid' : 'pending',
+                registrationPaymentStatus: appObj.paymentStatus || 'pending',
                 paymentMethod: appObj.paymentMethod,
                 transactionId: appObj.transactionId,
                 paymentProof: appObj.paymentProof,
                 paymentIntentId: appObj.paymentIntentId
             });
+            console.log(`Successfully created StudentProfile for ID: ${studentId}`);
+            return newProfile;
         } catch (err) {
             console.error("StudentProfile Create Error:", err);
             throw new Error(`Profile creation failed: ${err.message}`);
@@ -315,6 +349,9 @@ router.post('/finalize-checkout', async (req, res) => {
             admission.stripeSessionId = sessionId; // Prevent re-processing
             await admission.save();
             console.log(`Admission record updated for ${studentId}. Awaiting manual admin approval.`);
+            
+            // Send automatic email to guardian
+            await sendPaymentSuccessEmail(admission);
             
             res.status(200).json({ success: true, studentId, status: 'pending_approval' });
         } else {
