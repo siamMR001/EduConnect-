@@ -48,6 +48,7 @@ import AdminAnalytics from './pages/AdminAnalytics';
 import RegistrationSuccess from './pages/RegistrationSuccess';
 import StudentPayments from './pages/StudentPayments';
 import SocraticTutor from './components/SocraticTutor';
+import AdminProfile from './pages/AdminProfile';
 
 const Sidebar = ({ user, isOpen, setIsOpen }) => {
   if (user?.role !== 'admin') return null;
@@ -306,7 +307,7 @@ function App() {
             <Route path="/teacher-assignments" element={isLoggedIn && user?.role === 'teacher' ? <TeacherAssignments /> : <Navigate to="/dashboard" replace />} />
             <Route path="/apply" element={<AdmissionForm />} />
             <Route path="/registration-success" element={<RegistrationSuccess />} />
-            <Route path="/profile" element={isLoggedIn ? (user?.role === 'student' ? <StudentProfile /> : <TeacherProfile />) : <Navigate to="/login" replace />} />
+            <Route path="/profile" element={isLoggedIn ? (user?.role === 'student' ? <StudentProfile /> : user?.role === 'admin' ? <AdminProfile /> : <TeacherProfile />) : <Navigate to="/login" replace />} />
             <Route path="/profile/:id" element={isLoggedIn && (user?.role === 'admin' || user?.role === 'teacher') ? <StudentProfile /> : <Navigate to="/dashboard" replace />} />
             <Route path="/directory" element={isLoggedIn && user?.role !== 'student' ? <StudentDirectory /> : <Navigate to="/dashboard" replace />} />
             <Route path="/teacher-registration" element={<TeacherRegister />} />
