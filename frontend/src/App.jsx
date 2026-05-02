@@ -71,8 +71,8 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
       {/* Mobile Overlay */}
       {!isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-md animate-fade-in no-print print:hidden"
-          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-sm animate-fade-in no-print print:hidden"
+          onClick={() => setIsOpen(true)}
         />
       )}
 
@@ -89,7 +89,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
         {/* Sidebar Header for Mobile */}
         <div className="lg:hidden flex items-center justify-between p-6 border-b border-white/5 mb-4">
           <span className="text-xl font-black text-primary-light">EduConnect</span>
-          <button onClick={() => setIsOpen(false)} className="p-2 text-slate-400 hover:text-white">
+          <button onClick={() => setIsOpen(true)} className="p-2 text-slate-400 hover:text-white">
             <X size={24} />
           </button>
         </div>
@@ -170,7 +170,7 @@ function App() {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
   });
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth < 1024);
 
   useEffect(() => {
     const checkLoginStatus = () => {
