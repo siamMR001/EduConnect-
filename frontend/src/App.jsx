@@ -217,7 +217,7 @@ function App() {
               {/* Mobile Menu Button */}
               {user?.role === 'admin' && (
                 <button
-                  onClick={() => setIsSidebarCollapsed(false)}
+                  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                   className="lg:hidden p-2 text-slate-400 hover:text-white"
                 >
                   <Menu size={24} />
